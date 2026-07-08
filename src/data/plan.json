@@ -1,0 +1,517 @@
+{
+  "meta": {
+    "planName": "Cengo Cut + Marathon Hybrid Plan",
+    "version": "1.0",
+    "primaryGoals": [
+      "92kg -> 82-84kg",
+      "22% body fat -> 10-12%",
+      "Prepare for Istanbul Marathon on Nov 1",
+      "Maintain muscle mass and strength",
+      "Improve running consistency without injury"
+    ],
+    "profileAssumptions": {
+      "heightCm": 183,
+      "startWeightKg": 92,
+      "estimatedBodyFatPercent": 22,
+      "trainingStyle": "Mike Mentzer inspired low-volume high-intensity hybrid",
+      "dietStyle": "2 meals, sustainable meal prep, high protein"
+    }
+  },
+  "nutrition": {
+    "dailyTargets": {
+      "caloriesKcal": {
+        "min": 2200,
+        "max": 2300
+      },
+      "proteinG": {
+        "min": 200,
+        "max": 220
+      },
+      "carbsG": {
+        "min": 150,
+        "max": 180
+      },
+      "fatG": {
+        "min": 50,
+        "max": 60
+      },
+      "steps": {
+        "min": 10000
+      },
+      "sleepHours": {
+        "min": 7.5,
+        "max": 8.5
+      }
+    },
+    "meals": [
+      {
+        "id": "meal_1",
+        "name": "Chicken Potato Bowl",
+        "time": "12:00",
+        "items": [
+          {
+            "name": "Chicken breast",
+            "amount": 300,
+            "unit": "g"
+          },
+          {
+            "name": "Boiled potato",
+            "amount": 250,
+            "unit": "g"
+          },
+          {
+            "name": "Mixed vegetables",
+            "amount": 300,
+            "unit": "g"
+          },
+          {
+            "name": "Olive oil",
+            "amount": 10,
+            "unit": "g"
+          }
+        ],
+        "estimatedCaloriesKcal": 700
+      },
+      {
+        "id": "meal_2",
+        "name": "Lean Beef Rice Bowl",
+        "time": "19:00",
+        "items": [
+          {
+            "name": "Lean beef",
+            "amount": 300,
+            "unit": "g"
+          },
+          {
+            "name": "Rice",
+            "amount": 250,
+            "unit": "g"
+          },
+          {
+            "name": "Large salad",
+            "amount": 1,
+            "unit": "portion"
+          },
+          {
+            "name": "Olive oil",
+            "amount": 10,
+            "unit": "g"
+          }
+        ],
+        "estimatedCaloriesKcal": 900
+      },
+      {
+        "id": "post_workout",
+        "name": "Post Workout Shake",
+        "time": "after_training",
+        "items": [
+          {
+            "name": "Whey protein",
+            "amount": 2,
+            "unit": "scoop"
+          },
+          {
+            "name": "Banana",
+            "amount": 1,
+            "unit": "piece"
+          }
+        ],
+        "estimatedCaloriesKcal": 320
+      }
+    ],
+    "rules": [
+      "No alcohol during cut",
+      "Avoid unnecessary cheat meals",
+      "Meal prep first, eating out only if macros can be matched"
+    ]
+  },
+  "weeklySchedule": [
+    {
+      "day": "Monday",
+      "type": "strength",
+      "title": "Upper A",
+      "durationMin": 40,
+      "exercises": [
+        {
+          "name": "Incline Dumbbell Press",
+          "warmupSets": 2,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Pull Up / Lat Pulldown",
+          "warmupSets": 2,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Machine Chest Press",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Seated Cable Row",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Lateral Raise",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "12-20",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Cable Curl",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Rope Pushdown",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        }
+      ],
+      "postWorkoutStretchingId": "strength_stretch_5min"
+    },
+    {
+      "day": "Tuesday",
+      "type": "run",
+      "title": "Zone 2 Run",
+      "durationMin": 45,
+      "targetDistanceKm": 6,
+      "intensity": "Easy conversational pace",
+      "postWorkoutStretchingId": "run_stretch_5min"
+    },
+    {
+      "day": "Wednesday",
+      "type": "strength",
+      "title": "Lower Marathon-Friendly",
+      "durationMin": 35,
+      "exercises": [
+        {
+          "name": "Leg Press",
+          "warmupSets": 3,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9"
+        },
+        {
+          "name": "Romanian Deadlift",
+          "warmupSets": 2,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9"
+        },
+        {
+          "name": "Leg Curl",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "10-15",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Standing Calf Raise",
+          "warmupSets": 0,
+          "workingSets": 2,
+          "repRange": "10-15",
+          "intensity": "RPE 9"
+        },
+        {
+          "name": "Hanging Leg Raise",
+          "warmupSets": 0,
+          "workingSets": 3,
+          "repRange": "controlled",
+          "intensity": "clean reps"
+        }
+      ],
+      "postWorkoutStretchingId": "strength_stretch_5min"
+    },
+    {
+      "day": "Thursday",
+      "type": "run",
+      "title": "Tempo Run",
+      "durationMin": null,
+      "structure": [
+        {
+          "segment": "easy",
+          "distanceKm": 1
+        },
+        {
+          "segment": "tempo",
+          "distanceKm": 4,
+          "pace": "5:50-6:10/km"
+        },
+        {
+          "segment": "easy",
+          "distanceKm": 1
+        }
+      ],
+      "targetDistanceKm": 6,
+      "postWorkoutStretchingId": "run_stretch_5min"
+    },
+    {
+      "day": "Friday",
+      "type": "football",
+      "title": "Halisaha",
+      "durationMin": 60,
+      "rule": "No extra training"
+    },
+    {
+      "day": "Saturday",
+      "type": "strength",
+      "title": "Upper B",
+      "durationMin": 40,
+      "exercises": [
+        {
+          "name": "Weighted Dip / Chest Press",
+          "warmupSets": 1,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Weighted Chin Up",
+          "warmupSets": 1,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Shoulder Press",
+          "warmupSets": 1,
+          "workingSets": 1,
+          "repRange": "6-10",
+          "intensity": "RPE 9"
+        },
+        {
+          "name": "Row Variation",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Lateral Raise",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "12-20",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Hammer Curl",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        },
+        {
+          "name": "Overhead Triceps Extension",
+          "warmupSets": 0,
+          "workingSets": 1,
+          "repRange": "8-12",
+          "intensity": "RPE 9-10"
+        }
+      ],
+      "postWorkoutStretchingId": "strength_stretch_5min"
+    },
+    {
+      "day": "Sunday",
+      "type": "run",
+      "title": "Long Run",
+      "intensity": "Zone 2",
+      "progressionKmByWeek": [
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30
+      ],
+      "postWorkoutStretchingId": "run_stretch_5min"
+    }
+  ],
+  "mobility": {
+    "dailyMorningMobility": {
+      "id": "morning_mobility_5min",
+      "durationMin": 5,
+      "items": [
+        {
+          "name": "Cat-Cow",
+          "durationSec": 60
+        },
+        {
+          "name": "World's Greatest Stretch",
+          "durationSec": 60
+        },
+        {
+          "name": "Deep Squat Hold",
+          "durationSec": 60
+        },
+        {
+          "name": "Hip Openers",
+          "durationSec": 60
+        },
+        {
+          "name": "Shoulder Circles",
+          "durationSec": 60
+        }
+      ]
+    },
+    "stretchingRoutines": [
+      {
+        "id": "strength_stretch_5min",
+        "name": "Strength Training Cooldown",
+        "durationMin": 5,
+        "items": [
+          {
+            "name": "Couch Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Hamstring Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Figure 4 Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Child Pose",
+            "durationSec": 30,
+            "eachSide": false
+          },
+          {
+            "name": "Lat Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          }
+        ]
+      },
+      {
+        "id": "run_stretch_5min",
+        "name": "Run Cooldown",
+        "durationMin": 5,
+        "items": [
+          {
+            "name": "Calf Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Soleus Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Quad Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Hamstring Stretch",
+            "durationSec": 30,
+            "eachSide": true
+          },
+          {
+            "name": "Deep Squat Hold",
+            "durationSec": 60,
+            "eachSide": false
+          }
+        ]
+      }
+    ]
+  },
+  "progressTracking": {
+    "weeklyCheckInDay": "Monday",
+    "weeklyCheckInTime": "morning_fasted",
+    "metrics": [
+      {
+        "key": "weightKg",
+        "label": "Weight",
+        "unit": "kg"
+      },
+      {
+        "key": "waistCm",
+        "label": "Waist",
+        "unit": "cm"
+      },
+      {
+        "key": "chestCm",
+        "label": "Chest",
+        "unit": "cm"
+      },
+      {
+        "key": "hipCm",
+        "label": "Hip",
+        "unit": "cm"
+      },
+      {
+        "key": "frontPhoto",
+        "label": "Front Photo",
+        "type": "image"
+      },
+      {
+        "key": "sidePhoto",
+        "label": "Side Photo",
+        "type": "image"
+      }
+    ],
+    "dailyChecklist": [
+      "completedWorkout",
+      "completedMorningMobility",
+      "completedStretching",
+      "hitProteinTarget",
+      "hitCalorieTarget",
+      "steps10000Plus",
+      "sleep75Plus",
+      "noAlcohol"
+    ],
+    "runningMetrics": [
+      "distanceKm",
+      "durationMin",
+      "averagePace",
+      "averageHeartRate",
+      "maxHeartRate",
+      "rpe",
+      "notes"
+    ],
+    "strengthMetrics": [
+      "exerciseName",
+      "weightKg",
+      "reps",
+      "rpe",
+      "progressionNote"
+    ]
+  },
+  "benchmark": {
+    "initialTask": "5K benchmark run",
+    "effort": "Race effort but not reckless",
+    "requiredData": [
+      "time",
+      "averagePace",
+      "averageHeartRate",
+      "maxHeartRate",
+      "notes"
+    ]
+  }
+}
