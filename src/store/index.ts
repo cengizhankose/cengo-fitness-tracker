@@ -21,6 +21,22 @@ import { setKind } from '@/lib/derive'
 
 export const SCHEMA_VERSION = 2
 
+/** localStorage key holding the persist envelope `{ state, version }`. */
+export const STORAGE_KEY = 'cengo-cut'
+
+/** The exact keys `persist` writes to localStorage. Single source of truth —
+ *  `partialize` and the backup exporter both derive from this, so they can't drift. */
+export const PERSISTED_KEYS = [
+  'settings',
+  'checklist',
+  'checkIns',
+  'strengthLog',
+  'runLog',
+  'benchmark',
+  'activeSession',
+  '_schemaVersion',
+] as const
+
 const nowISO = (): string => new Date().toISOString()
 
 function newId(): string {
@@ -129,18 +145,21 @@ export interface AppState {
   resetAll: () => void
 }
 
-/** The slice actually written to localStorage (see `partialize` below). */
-export type PersistedState = Pick<
-  AppState,
-  | 'settings'
-  | 'checklist'
-  | 'checkIns'
-  | 'strengthLog'
-  | 'runLog'
-  | 'benchmark'
-  | 'activeSession'
-  | '_schemaVersion'
->
+/** The slice of AppState that actually reaches storage. */
+export type PersistedState = Pick<AppState, (typeof PERSISTED_KEYS)[number]>
+
+export function pickPersisted(s: AppState): PersistedState {
+  return {
+    settings: s.settings,
+    checklist: s.checklist,
+    checkIns: s.checkIns,
+    strengthLog: s.strengthLog,
+    runLog: s.runLog,
+    benchmark: s.benchmark,
+    activeSession: s.activeSession,
+    _schemaVersion: s._schemaVersion,
+  }
+}
 
 /**
  * v1 -> v2: only bump the version. v1 records carry no provenance, and a same-day log does NOT
@@ -150,7 +169,7 @@ export type PersistedState = Pick<
  */
 export function migrateState(state: PersistedState, version: number): PersistedState {
   if (version >= 2) return state
-  return { ...state, _schemaVersion: SCHEMA_VERSION }
+  return { ...state, activeSession: state.activeSession, _schemaVersion: SCHEMA_VERSION }
 }
 
 export const useStore = create<AppState>()(
@@ -388,19 +407,10 @@ export const useStore = create<AppState>()(
         })),
     }),
     {
-      name: 'cengo-cut',
+      name: STORAGE_KEY,
       version: SCHEMA_VERSION,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({
-        settings: s.settings,
-        checklist: s.checklist,
-        checkIns: s.checkIns,
-        strengthLog: s.strengthLog,
-        runLog: s.runLog,
-        benchmark: s.benchmark,
-        activeSession: s.activeSession,
-        _schemaVersion: s._schemaVersion,
-      }),
+      partialize: pickPersisted,
       migrate: (state, version) => migrateState(state as PersistedState, version),
     },
   ),

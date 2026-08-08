@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/store/toast'
 
 export function ToastHost() {
@@ -12,6 +12,7 @@ export function ToastHost() {
           className="animate-toast-in pointer-events-auto flex max-w-sm items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-4 py-3 text-sm font-medium text-text shadow-lg"
         >
           {t.tone === 'success' && <CheckCircle2 size={18} className="shrink-0 text-success" />}
+          {t.tone === 'error' && <AlertTriangle size={18} className="shrink-0 text-heat" />}
           <span>{t.text}</span>
         </div>
       ))}

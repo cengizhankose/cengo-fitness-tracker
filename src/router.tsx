@@ -4,6 +4,7 @@ import { TodayScreen } from '@/screens/TodayScreen'
 import { WeeklyScreen } from '@/screens/WeeklyScreen'
 import { LogScreen } from '@/screens/LogScreen'
 import { SessionScreen } from '@/screens/SessionScreen'
+import { SettingsScreen } from '@/screens/SettingsScreen'
 import { Splash } from '@/components/Splash'
 
 export const router = createBrowserRouter([
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       },
       { path: 'log', element: <LogScreen /> },
       { path: 'session', element: <SessionScreen /> },
+      { path: 'settings', element: <SettingsScreen /> },
     ],
   },
 ])

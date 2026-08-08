@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export interface ToastMsg {
   id: string
   text: string
-  tone: 'default' | 'success'
+  tone: 'default' | 'success' | 'error'
 }
 
 interface ToastState {

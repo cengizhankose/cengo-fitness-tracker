@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { WeightChart } from '@/components/charts'
 import { ProgressScreen } from '@/screens/ProgressScreen'
 import { useStore } from '@/store'
@@ -60,7 +61,7 @@ describe('ProgressScreen weight card', () => {
   })
 
   it('draws the target band instead of suppressing the chart when there is no data', () => {
-    render(<ProgressScreen />)
+    render(<MemoryRouter><ProgressScreen /></MemoryRouter>)
     const card = weightCard()
 
     // The chart is rendered, not replaced by an empty state...
@@ -90,7 +91,7 @@ describe('ProgressScreen weight card', () => {
       },
     })
 
-    render(<ProgressScreen />)
+    render(<MemoryRouter><ProgressScreen /></MemoryRouter>)
     const card = weightCard()
     expect(band(card)).not.toBeNull()
     expect(within(card).queryByText('Log a check-in to start the trend')).toBeNull()

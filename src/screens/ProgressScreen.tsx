@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Target, ClipboardCheck, Images, Save } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Target, ClipboardCheck, Images, Save, Settings2 } from 'lucide-react'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SectionCard } from '@/components/SectionCard'
 import { MetricInput } from '@/components/MetricInput'
@@ -83,7 +84,19 @@ export function ProgressScreen() {
 
   return (
     <>
-      <ScreenHeader title="Progress" subtitle="Weekly check-in & trends" />
+      <ScreenHeader
+        title="Progress"
+        subtitle="Weekly check-in & trends"
+        action={
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-faint active:bg-surface-2"
+          >
+            <Settings2 size={20} />
+          </Link>
+        }
+      />
       <div className="space-y-4 px-4 py-4">
         {goal && (
           <SectionCard title="Goal" icon={Target} accent="var(--color-volt)">
