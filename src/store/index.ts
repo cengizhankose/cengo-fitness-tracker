@@ -14,7 +14,7 @@ import type {
 import type { PhotoSlot } from '@/lib/photos'
 import { mondayOf, toLocalISODate } from '@/lib/dates'
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 const nowISO = (): string => new Date().toISOString()
 
@@ -25,20 +25,50 @@ function newId(): string {
 
 type ChecklistMap = Record<IsoDate, DailyChecklistRecord>
 
+/** Record-level fields (outside `items`) a write may patch. */
+type ChecklistMeta = Pick<DailyChecklistRecord, 'autoWorkout'>
+
 function writeChecklist(
   map: ChecklistMap,
   date: IsoDate,
   patch: (items: DailyChecklist) => DailyChecklist,
+  meta?: ChecklistMeta,
 ): ChecklistMap {
-  const prev = map[date]?.items ?? {}
-  return { ...map, [date]: { date, items: patch(prev), updatedAt: nowISO() } }
+  const prev = map[date]
+  return {
+    ...map,
+    [date]: { ...prev, ...meta, date, items: patch(prev?.items ?? {}), updatedAt: nowISO() },
+  }
 }
 
-/** Auto-tick the workout box for a date if not already set. */
+/** Auto-tick the workout box for a date if not already set, remembering we set it. */
 function tickWorkout(map: ChecklistMap, date: IsoDate): ChecklistMap {
   if (map[date]?.items.completedWorkout === true) return map
-  return writeChecklist(map, date, (items) => ({ ...items, completedWorkout: true }))
+  return writeChecklist(map, date, (items) => ({ ...items, completedWorkout: true }), {
+    autoWorkout: true,
+  })
 }
+
+/** Revert an auto-tick once the day's last real log is gone. Manual ticks are left alone. */
+function untickWorkout(map: ChecklistMap, date: IsoDate): ChecklistMap {
+  if (map[date]?.autoWorkout !== true) return map
+  return writeChecklist(map, date, (items) => ({ ...items, completedWorkout: false }), {
+    autoWorkout: undefined,
+  })
+}
+
+/** Does the date still hold a real workout log? Benchmarks mirror a run entry, so they don't count. */
+function hasWorkoutOn(
+  date: IsoDate,
+  strengthLog: StrengthLogEntry[],
+  runLog: RunLogEntry[],
+): boolean {
+  return strengthLog.some((e) => e.date === date) || runLog.some((e) => e.date === date)
+}
+
+/** A manual set/toggle of the workout box hands ownership to the user. */
+const ownershipMeta = (key: ChecklistKey): ChecklistMeta | undefined =>
+  key === 'completedWorkout' ? { autoWorkout: undefined } : undefined
 
 export interface AppState {
   settings: Settings
@@ -63,6 +93,29 @@ export interface AppState {
   resetAll: () => void
 }
 
+/** The slice actually written to localStorage (see `partialize` below). */
+export type PersistedState = Pick<
+  AppState,
+  | 'settings'
+  | 'checklist'
+  | 'checkIns'
+  | 'strengthLog'
+  | 'runLog'
+  | 'benchmark'
+  | '_schemaVersion'
+>
+
+/**
+ * v1 -> v2: only bump the version. v1 records carry no provenance, and a same-day log does NOT
+ * prove the tick was automatic — the user may have ticked it by hand and logged separately.
+ * Leaving `autoWorkout` unset treats every legacy tick as user-owned, so deleting a log can never
+ * revoke it. Automatic provenance is created only by v2 add-log actions, going forward.
+ */
+export function migrateState(state: PersistedState, version: number): PersistedState {
+  if (version >= 2) return state
+  return { ...state, _schemaVersion: SCHEMA_VERSION }
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
@@ -79,12 +132,22 @@ export const useStore = create<AppState>()(
 
       setChecklistItem: (date, key, value) =>
         set((s) => ({
-          checklist: writeChecklist(s.checklist, date, (items) => ({ ...items, [key]: value })),
+          checklist: writeChecklist(
+            s.checklist,
+            date,
+            (items) => ({ ...items, [key]: value }),
+            ownershipMeta(key),
+          ),
         })),
 
       toggleChecklistItem: (date, key) =>
         set((s) => ({
-          checklist: writeChecklist(s.checklist, date, (items) => ({ ...items, [key]: !items[key] })),
+          checklist: writeChecklist(
+            s.checklist,
+            date,
+            (items) => ({ ...items, [key]: !items[key] }),
+            ownershipMeta(key),
+          ),
         })),
 
       saveCheckIn: (input) =>
@@ -121,7 +184,13 @@ export const useStore = create<AppState>()(
         return id
       },
       removeStrengthEntry: (id) =>
-        set((s) => ({ strengthLog: s.strengthLog.filter((x) => x.id !== id) })),
+        set((s) => {
+          const gone = s.strengthLog.find((x) => x.id === id)
+          if (!gone) return {}
+          const strengthLog = s.strengthLog.filter((x) => x.id !== id)
+          if (hasWorkoutOn(gone.date, strengthLog, s.runLog)) return { strengthLog }
+          return { strengthLog, checklist: untickWorkout(s.checklist, gone.date) }
+        }),
 
       addRunEntry: (e) => {
         const id = newId()
@@ -131,7 +200,14 @@ export const useStore = create<AppState>()(
         }))
         return id
       },
-      removeRunEntry: (id) => set((s) => ({ runLog: s.runLog.filter((x) => x.id !== id) })),
+      removeRunEntry: (id) =>
+        set((s) => {
+          const gone = s.runLog.find((x) => x.id === id)
+          if (!gone) return {}
+          const runLog = s.runLog.filter((x) => x.id !== id)
+          if (hasWorkoutOn(gone.date, s.strengthLog, runLog)) return { runLog }
+          return { runLog, checklist: untickWorkout(s.checklist, gone.date) }
+        }),
 
       saveBenchmark: (b) => set(() => ({ benchmark: { ...b, createdAt: nowISO() } })),
 
@@ -157,7 +233,7 @@ export const useStore = create<AppState>()(
         benchmark: s.benchmark,
         _schemaVersion: s._schemaVersion,
       }),
-      migrate: (state) => state as AppState,
+      migrate: (state, version) => migrateState(state as PersistedState, version),
     },
   ),
 )

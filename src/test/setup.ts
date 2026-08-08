@@ -4,8 +4,6 @@ import { cleanup } from '@testing-library/react'
 const WIDTH = 390
 const HEIGHT = 170
 
-// recharts' ResponsiveContainer sizes itself from ResizeObserver + getBoundingClientRect,
-// both of which report 0 in jsdom — without these stubs every chart renders nothing.
 class ResizeObserverStub implements ResizeObserver {
   observe() {}
   unobserve() {}

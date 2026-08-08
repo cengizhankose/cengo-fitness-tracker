@@ -10,6 +10,8 @@ export type DailyChecklist = Partial<Record<ChecklistKey, boolean>>
 export interface DailyChecklistRecord {
   date: IsoDate
   items: DailyChecklist
+  /** completedWorkout was ticked by a strength/run log, not by the user. */
+  autoWorkout?: boolean
   updatedAt: IsoTimestamp
 }
 
