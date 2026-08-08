@@ -13,13 +13,15 @@
   /* ---- Text ---- */
   --color-text:          #f4f6f8;
   --color-text-muted:    #9aa3b2;
-  --color-text-faint:    #5b6472;
+  --color-text-faint:    #7c8596;   /* AA 4.5:1 on surface-2 */
 
   /* ---- Accents ---- */
   --color-volt:          #c6f135;
   --color-volt-dim:      #9bbe1f;
   --color-heat:          #ff3b30;
   --color-heat-dim:      #c42820;
+  /* text-only red: AA-safe on bg-heat/15 tinted surfaces */
+  --color-heat-soft:     #ff7a70;
   --color-success:       #34d399;
   --color-active:        #fbbf24;
   --color-locked:        #4b5360;

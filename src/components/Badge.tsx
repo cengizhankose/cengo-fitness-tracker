@@ -4,7 +4,7 @@ export type BadgeTone = 'volt' | 'heat' | 'success' | 'active' | 'run' | 'footba
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   volt: 'bg-volt/15 text-volt',
-  heat: 'bg-heat/15 text-heat',
+  heat: 'bg-heat/15 text-heat-soft',
   success: 'bg-success/15 text-success',
   active: 'bg-active/15 text-active',
   run: 'bg-run/15 text-run',
