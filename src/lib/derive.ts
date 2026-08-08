@@ -275,3 +275,69 @@ export function weightGoalProgress(goal: WeightGoal, current: number): number {
   if (span <= 0) return 0
   return Math.min(Math.max((goal.start - current) / span, 0), 1)
 }
+
+const WEIGHT_DOMAIN_PAD = 1
+const WEIGHT_DOMAIN_MIN_SPAN = 4
+const WEIGHT_DOMAIN_MAX_SPAN = 16
+const START_SPAN_RATIO = 2
+
+/** False for the degenerate `start === target` fallback goal, which has no drawable band. */
+export function hasWeightBand(goal: WeightGoal): boolean {
+  return (
+    Number.isFinite(goal.targetLow) &&
+    Number.isFinite(goal.targetHigh) &&
+    goal.targetLow !== goal.targetHigh
+  )
+}
+
+/**
+ * Y-axis domain for the weight chart. Always contains every finite data point AND the whole
+ * target band, so recharts can't discard the band as out-of-range. `goal.start` joins only
+ * when it doesn't flatten the series (it falls outside the rest only once you're at goal).
+ */
+export function weightChartDomain(data: MetricPoint[], goal?: WeightGoal): [number, number] {
+  let lo = Infinity
+  let hi = -Infinity
+
+  for (const point of data) {
+    if (!Number.isFinite(point.value)) continue
+    if (point.value < lo) lo = point.value
+    if (point.value > hi) hi = point.value
+  }
+  // Same predicate the chart uses, so we never reserve space for a band that isn't drawn.
+  if (goal && hasWeightBand(goal)) {
+    lo = Math.min(lo, goal.targetLow, goal.targetHigh)
+    hi = Math.max(hi, goal.targetLow, goal.targetHigh)
+  }
+  if (lo > hi) {
+    // No data and no drawable band: anchor on the start weight, else give up on a safe range.
+    if (!goal || !Number.isFinite(goal.start)) return [0, WEIGHT_DOMAIN_MIN_SPAN]
+    lo = goal.start
+    hi = goal.start
+  }
+
+  if (goal && Number.isFinite(goal.start)) {
+    const coreSpan = hi - lo
+    const withLo = Math.min(lo, goal.start)
+    const withHi = Math.max(hi, goal.start)
+    const withSpan = withHi - withLo
+    if (
+      withSpan <= WEIGHT_DOMAIN_MAX_SPAN &&
+      withSpan <= Math.max(coreSpan, WEIGHT_DOMAIN_MIN_SPAN) * START_SPAN_RATIO
+    ) {
+      lo = withLo
+      hi = withHi
+    }
+  }
+
+  // Order matters: pad -> round -> widen to the min span in whole units. Rounding last
+  // would inflate a fractional min-span expansion by up to another kg.
+  lo = Math.floor(lo - WEIGHT_DOMAIN_PAD)
+  hi = Math.ceil(hi + WEIGHT_DOMAIN_PAD)
+  const shortfall = WEIGHT_DOMAIN_MIN_SPAN - (hi - lo)
+  if (shortfall > 0) {
+    lo -= Math.ceil(shortfall / 2)
+    hi += Math.floor(shortfall / 2)
+  }
+  return [lo, hi]
+}

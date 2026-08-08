@@ -138,7 +138,15 @@ export function ProgressScreen() {
           </button>
         </SectionCard>
 
-        <ChartCard title="Weight" unit="kg" isEmpty={weightData.length === 0} emptyHint="Log a check-in to start the trend">
+        {/* With a goal we still draw the chart when there is no data yet, so the target
+            band stays visible; the hint moves below the chart instead of replacing it. */}
+        <ChartCard
+          title="Weight"
+          unit="kg"
+          isEmpty={weightData.length === 0 && !goal}
+          emptyHint="Log a check-in to start the trend"
+          note={weightData.length === 0 ? 'Log a check-in to start the trend' : undefined}
+        >
           <WeightChart data={weightData} goal={goal} />
         </ChartCard>
         <ChartCard title="Waist" unit="cm" isEmpty={waistData.length === 0} emptyHint="Log a check-in to start the trend">

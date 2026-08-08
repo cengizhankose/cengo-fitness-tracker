@@ -12,9 +12,11 @@ import {
   Tooltip,
   ReferenceArea,
   ReferenceLine,
+  Label,
 } from 'recharts'
 import type { MetricPoint, WeeklyAgg } from '@/lib/derive'
 import type { WeightGoal } from '@/lib/derive'
+import { hasWeightBand, weightChartDomain } from '@/lib/derive'
 import { formatDayMonth } from '@/lib/dates'
 
 const HEIGHT = 170
@@ -31,43 +33,66 @@ const AXIS_TICK = { fill: 'var(--color-text-muted)', fontSize: 11 } as const
 const AXIS_STROKE = 'var(--color-border)'
 
 export function WeightChart({ data, goal }: { data: MetricPoint[]; goal?: WeightGoal }) {
+  const domain = weightChartDomain(data, goal)
+  const showBand = goal != null && hasWeightBand(goal)
+  const first = data[0]?.value
+  const last = data.at(-1)?.value
+  const summary = [
+    first != null && last != null
+      ? `Weight trend, ${first} to ${last} kg over ${data.length} check-ins.`
+      : 'Weight trend, no check-ins yet.',
+    showBand ? `Target band ${goal.targetLow}–${goal.targetHigh} kg.` : '',
+    goal ? `Start ${goal.start} kg.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <ResponsiveContainer width="100%" height={HEIGHT}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
-        <defs>
-          <linearGradient id="grad-weight" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-volt)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="var(--color-volt)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid stroke={AXIS_STROKE} strokeDasharray="3 3" vertical={false} />
-        <XAxis
-          dataKey="date"
-          tickFormatter={formatDayMonth}
-          tick={AXIS_TICK}
-          stroke={AXIS_STROKE}
-          interval="preserveStartEnd"
-        />
-        <YAxis tick={AXIS_TICK} stroke={AXIS_STROKE} width={34} domain={['dataMin - 1', 'dataMax + 1']} />
-        {goal && (
-          <ReferenceArea
-            y1={goal.targetLow}
-            y2={goal.targetHigh}
-            fill="var(--color-success)"
-            fillOpacity={0.12}
+    <div role="img" aria-label={summary}>
+      <ResponsiveContainer width="100%" height={HEIGHT}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
+          <defs>
+            <linearGradient id="grad-weight" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-volt)" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="var(--color-volt)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke={AXIS_STROKE} strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={formatDayMonth}
+            tick={AXIS_TICK}
+            stroke={AXIS_STROKE}
+            interval="preserveStartEnd"
           />
-        )}
-        {goal && <ReferenceLine y={goal.start} stroke="var(--color-heat)" strokeDasharray="4 4" />}
-        <Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(v) => formatDayMonth(String(v))} />
-        <Area
-          type="monotone"
-          dataKey="value"
-          stroke="var(--color-volt)"
-          strokeWidth={2}
-          fill="url(#grad-weight)"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+          <YAxis tick={AXIS_TICK} stroke={AXIS_STROKE} width={34} domain={domain} />
+          {showBand && (
+            <ReferenceArea
+              y1={goal.targetLow}
+              y2={goal.targetHigh}
+              fill="var(--color-success)"
+              fillOpacity={0.12}
+            >
+              <Label
+                value={`Target ${goal.targetLow}–${goal.targetHigh} kg`}
+                position="insideLeft"
+                fill="var(--color-success)"
+                fontSize={10}
+              />
+            </ReferenceArea>
+          )}
+          {goal && <ReferenceLine y={goal.start} stroke="var(--color-heat)" strokeDasharray="4 4" />}
+          <Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(v) => formatDayMonth(String(v))} />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke="var(--color-volt)"
+            strokeWidth={2}
+            fill="url(#grad-weight)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 

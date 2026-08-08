@@ -5,10 +5,12 @@ interface ChartCardProps {
   unit?: string
   isEmpty?: boolean
   emptyHint?: string
+  /** Hint shown *below* a chart that still has something worth drawing (e.g. a goal band). */
+  note?: string
   children: ReactNode
 }
 
-export function ChartCard({ title, unit, isEmpty, emptyHint, children }: ChartCardProps) {
+export function ChartCard({ title, unit, isEmpty, emptyHint, note, children }: ChartCardProps) {
   return (
     <section className="rounded-lg border border-border bg-surface-1 p-4">
       <div className="mb-3 flex items-baseline justify-between">
@@ -22,7 +24,10 @@ export function ChartCard({ title, unit, isEmpty, emptyHint, children }: ChartCa
           {emptyHint ?? 'No data yet'}
         </div>
       ) : (
-        children
+        <>
+          {children}
+          {note && <p className="mt-2 text-center text-sm text-text-faint">{note}</p>}
+        </>
       )}
     </section>
   )
