@@ -1,17 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Dumbbell, Footprints, Save, Trash2, History } from 'lucide-react'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SectionCard } from '@/components/SectionCard'
 import { SegmentedToggle } from '@/components/SegmentedToggle'
 import { MetricInput } from '@/components/MetricInput'
+import { TimeInput } from '@/components/TimeInput'
 import { NumberStepper } from '@/components/NumberStepper'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/Badge'
 import { plan } from '@/lib/plan'
 import { scheduleForDate, lastWeightForExercise } from '@/lib/derive'
 import { toLocalISODate, formatShortDate } from '@/lib/dates'
-import { pace } from '@/lib/format'
+import { formatDuration, pace } from '@/lib/format'
+import { BENCHMARK_DISTANCE_KM, parseBenchmarkTime } from '@/lib/benchmark'
 import { useStore } from '@/store'
 import { useStrengthLog, useRunLog } from '@/store/selectors'
 import { useToast } from '@/store/toast'
@@ -19,6 +21,16 @@ import type { StrengthLogEntry, RunLogEntry } from '@/types/userData'
 
 type Tab = 'strength' | 'run'
 const num = (v: number | '') => (v === '' ? undefined : v)
+
+const MAX_DISTANCE_KM = 100
+const MIN_HR = 30
+const MAX_HR = 250
+const DISTANCE_ERROR = `Enter a distance between 0 and ${MAX_DISTANCE_KM} km`
+const HR_ERROR = `Heart rate must be between ${MIN_HR} and ${MAX_HR}`
+
+/** Inline field errors for the run form — the key doubles as the focus order. */
+type RunErrors = { time?: string; distance?: string; hrAvg?: string; hrMax?: string }
+const hasErrors = (e: RunErrors) => Object.values(e).some(Boolean)
 
 type Row =
   | { kind: 'strength'; e: StrengthLogEntry }
@@ -64,18 +76,40 @@ export function LogScreen() {
   const defaultDist = isBenchmark ? 5 : task.type === 'run' ? (task.targetDistanceKm ?? '') : ''
   const [distanceKm, setDistanceKm] = useState<number | ''>(defaultDist)
   const [durationMin, setDurationMin] = useState<number | ''>('')
+  const [benchmarkTime, setBenchmarkTime] = useState('')
   const [paceStr, setPaceStr] = useState('')
   const [hrAvg, setHrAvg] = useState<number | ''>('')
   const [hrMax, setHrMax] = useState<number | ''>('')
   const [runRpe, setRunRpe] = useState(5)
   const [runNotes, setRunNotes] = useState('')
+  const [errors, setErrors] = useState<RunErrors>({})
+
+  const timeRef = useRef<HTMLInputElement>(null)
+  const distanceRef = useRef<HTMLInputElement>(null)
+  const hrAvgRef = useRef<HTMLInputElement>(null)
+  const hrMaxRef = useRef<HTMLInputElement>(null)
+
+  function clearError(key: keyof RunErrors) {
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev))
+  }
+
+  /** Move focus to the first invalid field, in DOM order. */
+  function focusFirstInvalid(next: RunErrors) {
+    const order: [keyof RunErrors, typeof timeRef][] = [
+      ['time', timeRef],
+      ['distance', distanceRef],
+      ['hrAvg', hrAvgRef],
+      ['hrMax', hrMaxRef],
+    ]
+    order.find(([key]) => next[key])?.[1].current?.focus()
+  }
 
   // ---- store actions ----
   const addStrengthEntry = useStore((s) => s.addStrengthEntry)
   const addRunEntry = useStore((s) => s.addRunEntry)
   const removeStrengthEntry = useStore((s) => s.removeStrengthEntry)
   const removeRunEntry = useStore((s) => s.removeRunEntry)
-  const saveBenchmark = useStore((s) => s.saveBenchmark)
+  const logBenchmarkRun = useStore((s) => s.logBenchmarkRun)
   const push = useToast((s) => s.push)
 
   function saveStrength() {
@@ -93,42 +127,90 @@ export function LogScreen() {
     setNote('')
   }
 
+  /** Heart rate is optional in both modes, but must be plausible when given. */
+  function validateHeartRates(next: RunErrors) {
+    if (hrAvg !== '' && (hrAvg < MIN_HR || hrAvg > MAX_HR)) next.hrAvg = HR_ERROR
+    if (hrMax !== '' && (hrMax < MIN_HR || hrMax > MAX_HR)) next.hrMax = HR_ERROR
+  }
+
+  function reject(next: RunErrors) {
+    setErrors(next)
+    focusFirstInvalid(next)
+  }
+
+  function resetRunForm() {
+    setDistanceKm('')
+    setDurationMin('')
+    setBenchmarkTime('')
+    setPaceStr('')
+    setHrAvg('')
+    setHrMax('')
+    setRunNotes('')
+    setErrors({})
+  }
+
   function saveRun() {
-    if (distanceKm === '' || Number(distanceKm) <= 0) {
-      push('Enter a distance')
-      return
-    }
+    const next: RunErrors = {}
+    const dist = distanceKm === '' ? NaN : Number(distanceKm)
+    if (!Number.isFinite(dist) || dist <= 0 || dist > MAX_DISTANCE_KM) next.distance = DISTANCE_ERROR
+    validateHeartRates(next)
+    if (hasErrors(next)) return reject(next)
+
     const dur = durationMin === '' ? undefined : Number(durationMin)
-    const computedPace = paceStr || (dur ? pace(Number(distanceKm), dur) : undefined)
     addRunEntry({
       date: today,
       distanceKm: Number(distanceKm),
       durationMin: dur,
-      averagePace: computedPace,
+      averagePace: paceStr || (dur ? pace(Number(distanceKm), dur) : undefined),
       averageHeartRate: num(hrAvg),
       maxHeartRate: num(hrMax),
       rpe: runRpe,
       notes: runNotes || undefined,
       scheduleDay: task.type === 'run' ? task.day : undefined,
     })
-    if (isBenchmark && dur) {
-      saveBenchmark({
-        date: today,
-        timeSec: Math.round(dur * 60),
-        averagePace: computedPace,
-        averageHeartRate: num(hrAvg),
-        maxHeartRate: num(hrMax),
-        notes: runNotes || undefined,
-      })
-    }
     push(`Logged run · ${distanceKm} km`, 'success')
-    setDistanceKm('')
-    setDurationMin('')
-    setPaceStr('')
-    setHrAvg('')
-    setHrMax('')
-    setRunNotes('')
-    if (isBenchmark) navigate('/')
+    resetRunForm()
+  }
+
+  /**
+   * Benchmark mode is all-or-nothing: the store writes the benchmark and its run
+   * entry in a single transition, so there is no success toast and no navigation
+   * unless both actually persisted. The distance is fixed at 5 km and the pace is
+   * derived from it inside the store.
+   */
+  function saveBenchmarkRun() {
+    const next: RunErrors = {}
+    validateHeartRates(next)
+    const parsed = parseBenchmarkTime(benchmarkTime)
+    if (!parsed.ok) {
+      next.time = parsed.error
+      return reject(next)
+    }
+    if (hasErrors(next)) return reject(next)
+
+    const saved = logBenchmarkRun({
+      date: today,
+      timeSec: parsed.sec,
+      distanceKm: BENCHMARK_DISTANCE_KM,
+      averageHeartRate: num(hrAvg),
+      maxHeartRate: num(hrMax),
+      rpe: runRpe,
+      notes: runNotes || undefined,
+      scheduleDay: task.type === 'run' ? task.day : undefined,
+    })
+    if (!saved) {
+      return reject({ time: 'Could not save the benchmark — check the time and try again' })
+    }
+
+    push(`Benchmark saved · ${formatDuration(parsed.sec)}`, 'success')
+    resetRunForm()
+    navigate('/')
+  }
+
+  function handleRunSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (isBenchmark) saveBenchmarkRun()
+    else saveRun()
   }
 
   const rows: Row[] = [
@@ -198,50 +280,114 @@ export function LogScreen() {
           </SectionCard>
         ) : (
           <SectionCard title="Log a run" icon={Footprints} accent="var(--color-run)">
-            <div className="grid grid-cols-2 gap-3">
-              <MetricInput label="Distance" unit="km" value={distanceKm} onChange={setDistanceKm} />
-              <MetricInput
-                label="Duration"
-                unit="min"
-                inputMode="numeric"
-                value={durationMin}
-                onChange={setDurationMin}
-              />
-            </div>
-            <label className="mt-3 flex flex-col gap-1.5">
-              <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                Avg pace (optional)
-              </span>
-              <input
-                value={paceStr}
-                onChange={(e) => setPaceStr(e.target.value)}
-                placeholder="auto from distance + duration"
-                className="rounded-md border border-border bg-surface-2 px-3 py-3 text-sm text-text outline-none placeholder:text-text-faint focus:border-volt"
-              />
-            </label>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <MetricInput label="Avg HR" unit="bpm" inputMode="numeric" value={hrAvg} onChange={setHrAvg} />
-              <MetricInput label="Max HR" unit="bpm" inputMode="numeric" value={hrMax} onChange={setHrMax} />
-            </div>
-            <div className="mt-3">
-              <NumberStepper label="RPE" value={runRpe} min={1} max={10} onChange={setRunRpe} />
-            </div>
-            <label className="mt-3 flex flex-col gap-1.5">
-              <span className="text-xs font-medium uppercase tracking-wide text-text-muted">Notes</span>
-              <input
-                value={runNotes}
-                onChange={(e) => setRunNotes(e.target.value)}
-                placeholder="how did it feel?"
-                className="rounded-md border border-border bg-surface-2 px-3 py-3 text-sm text-text outline-none placeholder:text-text-faint focus:border-volt"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={saveRun}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-run py-3 font-semibold text-on-accent active:opacity-90"
-            >
-              <Save size={16} /> {isBenchmark ? 'Save benchmark' : 'Save run'}
-            </button>
+            <form onSubmit={handleRunSubmit} noValidate>
+              {isBenchmark ? (
+                <div className="space-y-3">
+                  <TimeInput
+                    label="Time"
+                    hint="mm:ss — e.g. 24:30"
+                    value={benchmarkTime}
+                    error={errors.time}
+                    inputRef={timeRef}
+                    onChange={(v) => {
+                      setBenchmarkTime(v)
+                      clearError('time')
+                    }}
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                      Distance
+                    </span>
+                    <div className="flex items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-3">
+                      <span className="text-xs text-text-faint">Fixed for the 5K benchmark</span>
+                      <span className="tnum font-display text-stat-md font-semibold text-text">
+                        {BENCHMARK_DISTANCE_KM}{' '}
+                        <span className="text-sm font-medium text-text-faint">km</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <MetricInput
+                    label="Distance"
+                    unit="km"
+                    value={distanceKm}
+                    error={errors.distance}
+                    inputRef={distanceRef}
+                    onChange={(v) => {
+                      setDistanceKm(v)
+                      clearError('distance')
+                    }}
+                  />
+                  <MetricInput
+                    label="Duration"
+                    unit="min"
+                    inputMode="numeric"
+                    value={durationMin}
+                    onChange={setDurationMin}
+                  />
+                </div>
+              )}
+              {/* Benchmark pace is always derived from 5 km — no manual override. */}
+              {!isBenchmark && (
+                <label className="mt-3 flex flex-col gap-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                    Avg pace (optional)
+                  </span>
+                  <input
+                    value={paceStr}
+                    onChange={(e) => setPaceStr(e.target.value)}
+                    placeholder="auto from distance + duration"
+                    className="rounded-md border border-border bg-surface-2 px-3 py-3 text-sm text-text outline-none placeholder:text-text-faint focus:border-volt"
+                  />
+                </label>
+              )}
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <MetricInput
+                  label="Avg HR"
+                  unit="bpm"
+                  inputMode="numeric"
+                  value={hrAvg}
+                  error={errors.hrAvg}
+                  inputRef={hrAvgRef}
+                  onChange={(v) => {
+                    setHrAvg(v)
+                    clearError('hrAvg')
+                  }}
+                />
+                <MetricInput
+                  label="Max HR"
+                  unit="bpm"
+                  inputMode="numeric"
+                  value={hrMax}
+                  error={errors.hrMax}
+                  inputRef={hrMaxRef}
+                  onChange={(v) => {
+                    setHrMax(v)
+                    clearError('hrMax')
+                  }}
+                />
+              </div>
+              <div className="mt-3">
+                <NumberStepper label="RPE" value={runRpe} min={1} max={10} onChange={setRunRpe} />
+              </div>
+              <label className="mt-3 flex flex-col gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-text-muted">Notes</span>
+                <input
+                  value={runNotes}
+                  onChange={(e) => setRunNotes(e.target.value)}
+                  placeholder="how did it feel?"
+                  className="rounded-md border border-border bg-surface-2 px-3 py-3 text-sm text-text outline-none placeholder:text-text-faint focus:border-volt"
+                />
+              </label>
+              <button
+                type="submit"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-run py-3 font-semibold text-on-accent active:opacity-90"
+              >
+                <Save size={16} /> {isBenchmark ? 'Save benchmark' : 'Save run'}
+              </button>
+            </form>
           </SectionCard>
         )}
 

@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
@@ -37,4 +38,7 @@ for (const [prop, size] of [
   Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, value: size })
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+})

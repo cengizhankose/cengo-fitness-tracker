@@ -21,7 +21,7 @@ export function formatDuration(totalSec: number): string {
 
 /** Parse "mm:ss" -> seconds (for the 5K benchmark input). Returns NaN if malformed. */
 export function parseDurationToSec(v: string): number {
-  const m = v.match(/^(\d{1,2}):(\d{1,2})$/)
+  const m = v.match(/^(\d{1,3}):([0-5]\d)$/)
   if (!m) return NaN
   return Number(m[1]) * 60 + Number(m[2])
 }

@@ -13,6 +13,8 @@ import type {
 } from '@/types/userData'
 import type { PhotoSlot } from '@/lib/photos'
 import { mondayOf, toLocalISODate } from '@/lib/dates'
+import { pace } from '@/lib/format'
+import { isBenchmarkDistance, isValidBenchmarkSec } from '@/lib/benchmark'
 
 export const SCHEMA_VERSION = 2
 
@@ -70,6 +72,18 @@ function hasWorkoutOn(
 const ownershipMeta = (key: ChecklistKey): ChecklistMeta | undefined =>
   key === 'completedWorkout' ? { autoWorkout: undefined } : undefined
 
+/** Everything a 5K benchmark needs. `distanceKm` is rejected unless it is exactly 5. */
+export interface BenchmarkRunInput {
+  date: IsoDate
+  timeSec: number
+  distanceKm: number
+  averageHeartRate?: number
+  maxHeartRate?: number
+  rpe?: number
+  notes?: string
+  scheduleDay?: RunLogEntry['scheduleDay']
+}
+
 export interface AppState {
   settings: Settings
   checklist: ChecklistMap
@@ -89,7 +103,11 @@ export interface AppState {
   removeStrengthEntry: (id: string) => void
   addRunEntry: (e: Omit<RunLogEntry, 'id' | 'createdAt'>) => string
   removeRunEntry: (id: string) => void
-  saveBenchmark: (b: Omit<BenchmarkResult, 'createdAt'>) => void
+  /**
+   * Writes the 5K benchmark *and* its run-log entry in one transition.
+   * Returns false and persists nothing at all when the result fails validation.
+   */
+  logBenchmarkRun: (input: BenchmarkRunInput) => boolean
   resetAll: () => void
 }
 
@@ -209,7 +227,51 @@ export const useStore = create<AppState>()(
           return { runLog, checklist: untickWorkout(s.checklist, gone.date) }
         }),
 
-      saveBenchmark: (b) => set(() => ({ benchmark: { ...b, createdAt: nowISO() } })),
+      logBenchmarkRun: (input) => {
+        // Second line of defence: never let an invalid result reach localStorage,
+        // even if a caller skipped the form validation.
+        if (!input.date || !isValidBenchmarkSec(input.timeSec)) return false
+        // A benchmark is a 5K: any other distance is rejected outright rather
+        // than silently coerced, so it can never be persisted as a benchmark.
+        if (!isBenchmarkDistance(input.distanceKm)) return false
+
+        const createdAt = nowISO()
+        const durationMin = input.timeSec / 60
+        // Pace is derived here, never accepted, so it cannot disagree with 5 km.
+        const averagePace = pace(input.distanceKm, durationMin)
+
+        // One set() -> one persist write: the benchmark and its run entry can
+        // never exist without each other.
+        set((s) => ({
+          benchmark: {
+            date: input.date,
+            timeSec: input.timeSec,
+            averagePace,
+            averageHeartRate: input.averageHeartRate,
+            maxHeartRate: input.maxHeartRate,
+            notes: input.notes,
+            createdAt,
+          },
+          runLog: [
+            {
+              id: newId(),
+              date: input.date,
+              distanceKm: input.distanceKm,
+              durationMin,
+              averagePace,
+              averageHeartRate: input.averageHeartRate,
+              maxHeartRate: input.maxHeartRate,
+              rpe: input.rpe,
+              notes: input.notes,
+              scheduleDay: input.scheduleDay,
+              createdAt,
+            },
+            ...s.runLog,
+          ],
+          checklist: tickWorkout(s.checklist, input.date),
+        }))
+        return true
+      },
 
       resetAll: () =>
         set(() => ({
