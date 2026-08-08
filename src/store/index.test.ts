@@ -164,7 +164,14 @@ describe('edge cases', () => {
 
   it('does not let a benchmark hold the tick — the run entry is the workout record', () => {
     const runId = logRun(today, 5)
-    state().saveBenchmark({ date: today, timeSec: 1500 })
+    useStore.setState({
+      benchmark: {
+        date: today,
+        timeSec: 1500,
+        averagePace: '5:00/km',
+        createdAt: new Date().toISOString(),
+      },
+    })
 
     state().removeRunEntry(runId)
 

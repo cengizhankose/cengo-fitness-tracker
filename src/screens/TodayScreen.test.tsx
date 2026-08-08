@@ -146,7 +146,7 @@ describe('TodayScreen', () => {
     expect(screen.getByRole('button', { name: 'Log 5K' })).toBeInTheDocument()
     unmount()
 
-    useStore.getState().saveBenchmark({ date: toLocalISODate(), timeSec: 1500 })
+    useStore.getState().logBenchmarkRun({ date: toLocalISODate(), timeSec: 1500, distanceKm: 5 })
     renderScreen()
     expect(screen.queryByRole('button', { name: 'Log 5K' })).not.toBeInTheDocument()
   })
