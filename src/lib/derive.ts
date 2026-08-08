@@ -249,6 +249,14 @@ export function lastWeightForExercise(
   return top
 }
 
+/** Exercise names already logged on `date` — drives the Today workout summary counter. */
+export function loggedExerciseNamesToday(
+  strengthLog: StrengthLogEntry[],
+  date: IsoDate = toLocalISODate(),
+): Set<string> {
+  return new Set(strengthLog.filter((e) => e.date === date).map((e) => e.exerciseName))
+}
+
 // ---- Weight goal ----
 
 export interface WeightGoal {

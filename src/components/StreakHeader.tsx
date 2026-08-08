@@ -15,11 +15,12 @@ export function StreakHeader({ streak, best, done, total, weekly }: StreakHeader
   const weeklyPct = weekly.total > 0 ? Math.round((weekly.done / weekly.total) * 100) : 0
 
   return (
-    <section className="rounded-lg border border-border bg-surface-1 p-5">
-      <div className="flex items-center gap-5">
+    <section className="rounded-lg border border-border bg-surface-1 p-4">
+      <div className="flex items-center gap-4">
         <ProgressRing
           value={done}
           max={total}
+          size={104}
           accent="heat"
           ariaLabel={`${streak} day streak, ${done} of ${total} tasks done today`}
           centerSlot={

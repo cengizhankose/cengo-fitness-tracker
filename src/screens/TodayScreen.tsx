@@ -1,19 +1,21 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Dumbbell, ListChecks, Apple, UtensilsCrossed, Sunrise, StretchHorizontal, Timer } from 'lucide-react'
+import { ListChecks, Apple, UtensilsCrossed, Sunrise, StretchHorizontal, Timer } from 'lucide-react'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { StreakHeader } from '@/components/StreakHeader'
 import { SectionCard } from '@/components/SectionCard'
-import { TaskDetail } from '@/components/TaskDetail'
+import { CollapsibleSection } from '@/components/CollapsibleSection'
+import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { ChecklistItem } from '@/components/ChecklistItem'
 import { NutritionTargets } from '@/components/NutritionTargets'
 import { MealCard } from '@/components/MealCard'
 import { RoutineCard } from '@/components/RoutineCard'
 import { Badge } from '@/components/Badge'
 import { plan } from '@/lib/plan'
-import { postWorkoutStretchFor } from '@/lib/derive'
-import { TYPE_LABEL, TYPE_COLOR } from '@/lib/planMeta'
+import { postWorkoutStretchFor, loggedExerciseNamesToday } from '@/lib/derive'
 import { CHECKLIST_META } from '@/lib/checklistMeta'
 import { toLocalISODate, formatShortDate } from '@/lib/dates'
+import { formatRange } from '@/lib/format'
 import { useStore } from '@/store'
 import {
   useTodayTask,
@@ -22,7 +24,11 @@ import {
   useWeeklyCompletion,
   useChecklistRecord,
   useBenchmark,
+  useStrengthLog,
 } from '@/store/selectors'
+
+/** Sections the user can collapse. The checklist is deliberately not one of them. */
+type SectionId = 'workout' | 'targets' | 'meals' | 'mobility' | 'stretch'
 
 export function TodayScreen() {
   const navigate = useNavigate()
@@ -33,15 +39,40 @@ export function TodayScreen() {
   const weekly = useWeeklyCompletion(today)
   const record = useChecklistRecord(today)
   const benchmark = useBenchmark()
+  const strengthLog = useStrengthLog()
   const toggle = useStore((s) => s.toggleChecklistItem)
 
   const stretch = postWorkoutStretchFor(plan, task)
   const morning = plan.mobility.dailyMorningMobility
+  const targets = plan.nutrition.dailyTargets
+  const mealKcal = plan.nutrition.meals.reduce((sum, m) => sum + m.estimatedCaloriesKcal, 0)
+
+  // Open/closed state is intentionally ephemeral (same pattern as WeeklyScreen's openDay):
+  // every visit starts from the curated hierarchy, and the persisted store is untouched.
+  const [overrides, setOverrides] = useState<Partial<Record<SectionId, boolean>>>({})
+  const setSection = (id: SectionId, open: boolean) =>
+    setOverrides((o) => ({ ...o, [id]: open }))
+
+  // The workout detail starts collapsed, but auto-opens mid-workout so returning from
+  // /log lands back on the exercise list. Derived from the log — nothing is stored.
+  const loggedNames = loggedExerciseNamesToday(strengthLog, today)
+  const exTotal = task.type === 'strength' ? task.exercises.length : 0
+  const exDone =
+    task.type === 'strength' ? task.exercises.filter((e) => loggedNames.has(e.name)).length : 0
+  const workoutOpen = overrides.workout ?? (exDone > 0 && exDone < exTotal)
 
   return (
     <>
-      <ScreenHeader title="Today" subtitle={formatShortDate(today)} />
-      <div className="space-y-4 px-4 py-4">
+      <ScreenHeader
+        title="Today"
+        subtitle={formatShortDate(today)}
+        action={
+          <Badge tone={total > 0 && done >= total ? 'success' : 'muted'}>
+            {done}/{total}
+          </Badge>
+        }
+      />
+      <div className="space-y-3 px-4 py-4">
         <StreakHeader
           streak={streak.current}
           best={streak.best}
@@ -51,24 +82,29 @@ export function TodayScreen() {
         />
 
         {!benchmark && (
-          <SectionCard title="Benchmark" icon={Timer} accent="var(--color-active)">
-            <p className="text-sm text-text-muted">{plan.benchmark.initialTask}</p>
-            <p className="mt-1 text-xs text-text-faint">{plan.benchmark.effort}</p>
+          <section className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
+            <Timer size={16} aria-hidden className="shrink-0 text-active" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-text">{plan.benchmark.initialTask}</p>
+              <p className="truncate text-xs text-text-faint">{plan.benchmark.effort}</p>
+            </div>
             <button
               type="button"
               onClick={() => navigate('/log?type=run&benchmark=1')}
-              className="mt-3 w-full rounded-md bg-active py-2.5 text-sm font-semibold text-on-accent"
+              className="h-9 shrink-0 rounded-md bg-active px-3 text-sm font-semibold text-on-accent"
             >
-              Log 5K result
+              Log 5K
             </button>
-          </SectionCard>
+          </section>
         )}
 
-        <SectionCard title={`${TYPE_LABEL[task.type]} · ${task.title}`} icon={Dumbbell} accent={TYPE_COLOR[task.type]}>
-          <TaskDetail day={task} enableLog />
-        </SectionCard>
+        <TodayWorkoutCard
+          day={task}
+          open={workoutOpen}
+          onOpenChange={(open) => setSection('workout', open)}
+        />
 
-        <SectionCard title="Daily Checklist" icon={ListChecks}>
+        <SectionCard sectionId="checklist" title="Daily Checklist" icon={ListChecks}>
           <div className="space-y-2">
             {keys.map((key) => {
               const meta = CHECKLIST_META[key]
@@ -85,11 +121,26 @@ export function TodayScreen() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Targets" icon={Apple} accent="var(--color-volt)">
-          <NutritionTargets targets={plan.nutrition.dailyTargets} />
-        </SectionCard>
+        <CollapsibleSection
+          id="targets"
+          title="Targets"
+          icon={Apple}
+          accent="var(--color-volt)"
+          summary={`${formatRange(targets.caloriesKcal, 'kcal')} · ${formatRange(targets.proteinG, 'g')} protein`}
+          open={overrides.targets ?? false}
+          onOpenChange={(open) => setSection('targets', open)}
+        >
+          <NutritionTargets targets={targets} />
+        </CollapsibleSection>
 
-        <SectionCard title="Meals" icon={UtensilsCrossed}>
+        <CollapsibleSection
+          id="meals"
+          title="Meals"
+          icon={UtensilsCrossed}
+          summary={`${plan.nutrition.meals.length} meals · ~${mealKcal} kcal`}
+          open={overrides.meals ?? false}
+          onOpenChange={(open) => setSection('meals', open)}
+        >
           <div className="space-y-2.5">
             {plan.nutrition.meals.map((meal) => (
               <MealCard key={meal.id} meal={meal} />
@@ -102,16 +153,32 @@ export function TodayScreen() {
               ))}
             </div>
           </div>
-        </SectionCard>
+        </CollapsibleSection>
 
-        <SectionCard title="Morning Mobility" icon={Sunrise} accent="var(--color-active)">
+        <CollapsibleSection
+          id="mobility"
+          title="Morning Mobility"
+          icon={Sunrise}
+          accent="var(--color-active)"
+          summary={`${morning.durationMin} min · ${morning.items.length} moves`}
+          open={overrides.mobility ?? false}
+          onOpenChange={(open) => setSection('mobility', open)}
+        >
           <RoutineCard routine={morning} title={`${morning.durationMin}-min wake-up`} />
-        </SectionCard>
+        </CollapsibleSection>
 
         {stretch && (
-          <SectionCard title="Post-Workout Stretch" icon={StretchHorizontal} accent="var(--color-run)">
+          <CollapsibleSection
+            id="stretch"
+            title="Post-Workout Stretch"
+            icon={StretchHorizontal}
+            accent="var(--color-run)"
+            summary={`${stretch.durationMin} min · ${stretch.items.length} moves`}
+            open={overrides.stretch ?? false}
+            onOpenChange={(open) => setSection('stretch', open)}
+          >
             <RoutineCard routine={stretch} />
-          </SectionCard>
+          </CollapsibleSection>
         )}
       </div>
     </>

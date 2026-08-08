@@ -23,7 +23,8 @@ export function DayCard({ day, isToday, expanded, onToggle }: DayCardProps) {
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        aria-controls={`day-${day.day}-panel`}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-volt"
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -47,11 +48,9 @@ export function DayCard({ day, isToday, expanded, onToggle }: DayCardProps) {
           className={`shrink-0 text-text-faint transition-transform ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
-      {expanded && (
-        <div className="border-t border-border px-4 py-3">
-          <TaskDetail day={day} enableLog={isToday} />
-        </div>
-      )}
+      <div id={`day-${day.day}-panel`} hidden={!expanded} className="border-t border-border px-4 py-3">
+        {expanded && <TaskDetail day={day} enableLog={isToday} />}
+      </div>
     </div>
   )
 }
