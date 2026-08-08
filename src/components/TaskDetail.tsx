@@ -4,7 +4,7 @@ import { ExerciseRow } from '@/components/ExerciseRow'
 import { ProgressionTrack } from '@/components/ProgressionTrack'
 import { Badge } from '@/components/Badge'
 import type { ScheduleDay, RunDay } from '@/types/plan'
-import { useProgramWeek, useStrengthLog } from '@/store/selectors'
+import { useProgramWeek, useStrengthLog, useActiveSession } from '@/store/selectors'
 import { lastWeightForExercise } from '@/lib/derive'
 import { toLocalISODate } from '@/lib/dates'
 
@@ -86,7 +86,10 @@ interface TaskDetailProps {
 export function TaskDetail({ day, enableLog = true }: TaskDetailProps) {
   const navigate = useNavigate()
   const strengthLog = useStrengthLog()
+  const activeSession = useActiveSession()
   const today = toLocalISODate()
+  // "last Xkg" is history — sets from the workout in progress must not feed it.
+  const history = { excludeSessionId: activeSession?.id }
 
   if (day.type === 'strength') {
     const loggedNames = new Set(
@@ -98,7 +101,7 @@ export function TaskDetail({ day, enableLog = true }: TaskDetailProps) {
           <ExerciseRow
             key={ex.name}
             exercise={ex}
-            lastWeightKg={lastWeightForExercise(strengthLog, ex.name)}
+            lastWeightKg={lastWeightForExercise(strengthLog, ex.name, history)}
             loggedToday={loggedNames.has(ex.name)}
             onLog={
               enableLog

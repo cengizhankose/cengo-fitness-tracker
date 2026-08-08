@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ListChecks, Apple, UtensilsCrossed, Sunrise, StretchHorizontal, Timer } from 'lucide-react'
+import {
+  Dumbbell,
+  ListChecks,
+  Apple,
+  UtensilsCrossed,
+  Sunrise,
+  StretchHorizontal,
+  Timer,
+  Play,
+  ArrowRight,
+} from 'lucide-react'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { StreakHeader } from '@/components/StreakHeader'
 import { SectionCard } from '@/components/SectionCard'
@@ -12,11 +22,12 @@ import { MealCard } from '@/components/MealCard'
 import { RoutineCard } from '@/components/RoutineCard'
 import { Badge } from '@/components/Badge'
 import { plan } from '@/lib/plan'
-import { postWorkoutStretchFor, loggedExerciseNamesToday } from '@/lib/derive'
+import { postWorkoutStretchFor, loggedExerciseNamesToday, sessionProgress } from '@/lib/derive'
 import { CHECKLIST_META } from '@/lib/checklistMeta'
 import { toLocalISODate, formatShortDate } from '@/lib/dates'
 import { formatRange } from '@/lib/format'
 import { useStore } from '@/store'
+import { useToast } from '@/store/toast'
 import {
   useTodayTask,
   useTodayChecklistRatio,
@@ -24,6 +35,7 @@ import {
   useWeeklyCompletion,
   useChecklistRecord,
   useBenchmark,
+  useActiveSession,
   useStrengthLog,
 } from '@/store/selectors'
 
@@ -41,6 +53,10 @@ export function TodayScreen() {
   const benchmark = useBenchmark()
   const strengthLog = useStrengthLog()
   const toggle = useStore((s) => s.toggleChecklistItem)
+  const startSession = useStore((s) => s.startSession)
+  const discardSession = useStore((s) => s.discardSession)
+  const push = useToast((s) => s.push)
+  const activeSession = useActiveSession()
 
   const stretch = postWorkoutStretchFor(plan, task)
   const morning = plan.mobility.dailyMorningMobility
@@ -61,6 +77,40 @@ export function TodayScreen() {
     task.type === 'strength' ? task.exercises.filter((e) => loggedNames.has(e.name)).length : 0
   const workoutOpen = overrides.workout ?? (exDone > 0 && exDone < exTotal)
 
+  // Any unfinished session gets a banner, whatever day it belongs to — an old cursor,
+  // or one whose day is no longer a strength day, must never become invisible.
+  // Safe lookup, not scheduleForDay(): that throws, and this must survive bad data.
+  const sessionDay = activeSession
+    ? plan.weeklySchedule.find((d) => d.day === activeSession.dayName)
+    : undefined
+  const sessionProgressByName = new Map(
+    activeSession && sessionDay?.type === 'strength'
+      ? sessionProgress(sessionDay, strengthLog, activeSession.id).map((p) => [p.exerciseName, p])
+      : [],
+  )
+  const sessionDone = activeSession
+    ? activeSession.exerciseNames.filter((n) => sessionProgressByName.get(n)?.done).length
+    : 0
+  const sessionLabel = sessionDay?.title ?? activeSession?.dayName ?? ''
+  const sessionIsToday = activeSession?.date === today
+
+  function startWorkout() {
+    // Never replaces an existing cursor — the CTA is hidden while one is open, and the
+    // banner is the only way past it (resume or discard).
+    if (task.type !== 'strength' || activeSession) return
+    startSession(
+      today,
+      task.day,
+      task.exercises.map((e) => e.name),
+    )
+    navigate('/session')
+  }
+
+  function discardWorkout() {
+    discardSession()
+    push('Workout discarded — your logged sets are safe')
+  }
+
   return (
     <>
       <ScreenHeader
@@ -80,6 +130,44 @@ export function TodayScreen() {
           total={total}
           weekly={weekly}
         />
+
+        {activeSession && (
+          <SectionCard
+            title="Unfinished workout"
+            icon={Dumbbell}
+            accent="var(--color-active)"
+            className="border-active/40"
+          >
+            <p className="text-sm text-text">
+              {sessionLabel}
+              <span className="text-text-muted">
+                {' · '}
+                {sessionIsToday ? 'today' : formatShortDate(activeSession.date)}
+              </span>
+            </p>
+            <p className="tnum mt-1 text-xs text-text-muted">
+              {sessionDone} of {activeSession.exerciseNames.length} exercises done
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/session')}
+                aria-label={`Resume unfinished workout from ${formatShortDate(activeSession.date)}`}
+                className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 rounded-md bg-volt text-sm font-semibold text-on-accent active:bg-volt-dim"
+              >
+                <ArrowRight size={18} strokeWidth={2.5} /> Resume workout
+              </button>
+              <button
+                type="button"
+                onClick={discardWorkout}
+                aria-label={`Discard unfinished workout from ${formatShortDate(activeSession.date)}`}
+                className="min-h-[48px] shrink-0 rounded-md border border-border-strong px-4 text-sm font-semibold text-text active:bg-surface-2"
+              >
+                Discard
+              </button>
+            </div>
+          </SectionCard>
+        )}
 
         {!benchmark && (
           <section className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
@@ -103,6 +191,15 @@ export function TodayScreen() {
           open={workoutOpen}
           onOpenChange={(open) => setSection('workout', open)}
         />
+        {task.type === 'strength' && !activeSession && (
+          <button
+            type="button"
+            onClick={startWorkout}
+            className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-md bg-volt font-semibold text-on-accent active:bg-volt-dim"
+          >
+            <Play size={18} strokeWidth={2.5} /> Start workout
+          </button>
+        )}
 
         <SectionCard sectionId="checklist" title="Daily Checklist" icon={ListChecks}>
           <div className="space-y-2">

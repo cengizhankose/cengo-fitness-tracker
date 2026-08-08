@@ -1,12 +1,14 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { ChecklistKey } from '@/types/plan'
+import type { ChecklistKey, DayName } from '@/types/plan'
 import type {
   Settings,
   DailyChecklist,
   DailyChecklistRecord,
   CheckIn,
   StrengthLogEntry,
+  StrengthSet,
+  ActiveSession,
   RunLogEntry,
   BenchmarkResult,
   IsoDate,
@@ -15,6 +17,7 @@ import type { PhotoSlot } from '@/lib/photos'
 import { mondayOf, toLocalISODate } from '@/lib/dates'
 import { pace } from '@/lib/format'
 import { isBenchmarkDistance, isValidBenchmarkSec } from '@/lib/benchmark'
+import { setKind } from '@/lib/derive'
 
 export const SCHEMA_VERSION = 2
 
@@ -84,6 +87,14 @@ export interface BenchmarkRunInput {
   scheduleDay?: RunLogEntry['scheduleDay']
 }
 
+export interface SessionSetsInput {
+  sessionId: string
+  date: IsoDate
+  exerciseName: string
+  sets: StrengthSet[]
+  progressionNote?: string
+}
+
 export interface AppState {
   settings: Settings
   checklist: ChecklistMap
@@ -91,6 +102,7 @@ export interface AppState {
   strengthLog: StrengthLogEntry[]
   runLog: RunLogEntry[]
   benchmark?: BenchmarkResult
+  activeSession?: ActiveSession
   _schemaVersion: number
 
   // actions
@@ -108,6 +120,12 @@ export interface AppState {
    * Returns false and persists nothing at all when the result fails validation.
    */
   logBenchmarkRun: (input: BenchmarkRunInput) => boolean
+  startSession: (date: IsoDate, dayName: DayName, exerciseNames: string[]) => string
+  setSessionIndex: (index: number) => void
+  /** Ends the session. Returns whether it counted as a completed workout. */
+  finishSession: () => boolean
+  discardSession: () => void
+  upsertSessionSets: (input: SessionSetsInput) => string | undefined
   resetAll: () => void
 }
 
@@ -120,6 +138,7 @@ export type PersistedState = Pick<
   | 'strengthLog'
   | 'runLog'
   | 'benchmark'
+  | 'activeSession'
   | '_schemaVersion'
 >
 
@@ -136,13 +155,14 @@ export function migrateState(state: PersistedState, version: number): PersistedS
 
 export const useStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       settings: { programStartDate: mondayOf(toLocalISODate()) },
       checklist: {},
       checkIns: {},
       strengthLog: [],
       runLog: [],
       benchmark: undefined,
+      activeSession: undefined,
       _schemaVersion: SCHEMA_VERSION,
 
       setProgramStartDate: (d) =>
@@ -273,6 +293,90 @@ export const useStore = create<AppState>()(
         return true
       },
 
+      // ---- Workout session ----
+
+      startSession: (date, dayName, exerciseNames) => {
+        const id = newId()
+        set(() => ({
+          activeSession: { id, date, dayName, exerciseNames, currentIndex: 0, startedAt: nowISO() },
+        }))
+        return id
+      },
+
+      setSessionIndex: (index) =>
+        set((s) => {
+          const cur = s.activeSession
+          if (!cur) return {}
+          const last = Math.max(cur.exerciseNames.length - 1, 0)
+          return { activeSession: { ...cur, currentIndex: Math.min(Math.max(index, 0), last) } }
+        }),
+
+      /**
+       * The one and only completion trigger for a session. A workout counts as done only
+       * once at least one working set is on record — warmup-only, empty and fully-skipped
+       * sessions end without ticking anything.
+       */
+      finishSession: () => {
+        const current = get().activeSession
+        if (!current) return false
+        const completed = get().strengthLog.some(
+          (e) => e.sessionId === current.id && e.sets.some((x) => setKind(x) === 'working'),
+        )
+        set((s) => ({
+          activeSession: undefined,
+          checklist: completed ? tickWorkout(s.checklist, current.date) : s.checklist,
+        }))
+        return completed
+      },
+
+      /** Abandons the session cursor. Sets already written to the log are kept. */
+      discardSession: () => set(() => ({ activeSession: undefined })),
+
+      /**
+       * Idempotent per (sessionId, exerciseName): replaces that entry's sets, or creates
+       * the entry. An empty `sets` removes it. Entries without a sessionId (the Log screen's
+       * ad-hoc ones) are never matched, so they can't be overwritten from a session.
+       *
+       * Deliberately does NOT touch the checklist — completion is finishSession's job alone,
+       * so a workout you started but walked away from never reads as done.
+       */
+      upsertSessionSets: ({ sessionId, date, exerciseName, sets, progressionNote }) => {
+        const existing = get().strengthLog.find(
+          (e) => e.sessionId === sessionId && e.exerciseName === exerciseName,
+        )
+
+        if (sets.length === 0) {
+          if (existing) {
+            set((s) => ({ strengthLog: s.strengthLog.filter((x) => x.id !== existing.id) }))
+          }
+          return undefined
+        }
+
+        const stamped = sets.map((x) => ({ ...x, id: x.id ?? newId() }))
+        const id = existing?.id ?? newId()
+
+        set((s) => ({
+          strengthLog: existing
+            ? s.strengthLog.map((e) =>
+                e.id === id ? { ...e, sets: stamped, progressionNote, updatedAt: nowISO() } : e,
+              )
+            : [
+                {
+                  id,
+                  date,
+                  exerciseName,
+                  sets: stamped,
+                  sessionId,
+                  progressionNote,
+                  createdAt: nowISO(),
+                  updatedAt: nowISO(),
+                },
+                ...s.strengthLog,
+              ],
+        }))
+        return id
+      },
+
       resetAll: () =>
         set(() => ({
           checklist: {},
@@ -280,6 +384,7 @@ export const useStore = create<AppState>()(
           strengthLog: [],
           runLog: [],
           benchmark: undefined,
+          activeSession: undefined,
         })),
     }),
     {
@@ -293,6 +398,7 @@ export const useStore = create<AppState>()(
         strengthLog: s.strengthLog,
         runLog: s.runLog,
         benchmark: s.benchmark,
+        activeSession: s.activeSession,
         _schemaVersion: s._schemaVersion,
       }),
       migrate: (state, version) => migrateState(state as PersistedState, version),

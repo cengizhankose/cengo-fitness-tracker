@@ -15,7 +15,7 @@ import { toLocalISODate, formatShortDate } from '@/lib/dates'
 import { formatDuration, pace } from '@/lib/format'
 import { BENCHMARK_DISTANCE_KM, parseBenchmarkTime } from '@/lib/benchmark'
 import { useStore } from '@/store'
-import { useStrengthLog, useRunLog } from '@/store/selectors'
+import { useStrengthLog, useRunLog, useActiveSession } from '@/store/selectors'
 import { useToast } from '@/store/toast'
 import type { StrengthLogEntry, RunLogEntry } from '@/types/userData'
 
@@ -55,9 +55,13 @@ export function LogScreen() {
     return [...new Set(names)]
   }, [])
   const strengthLog = useStrengthLog()
+  const activeSession = useActiveSession()
+  // Prefill from history only: a workout in progress (and any warmup set) must not seed it.
+  const history = { excludeSessionId: activeSession?.id }
   const [exercise, setExercise] = useState(presetExercise || exerciseNames[0] || '')
   const [weightKg, setWeightKg] = useState<number | ''>(
-    () => lastWeightForExercise(strengthLog, presetExercise || exerciseNames[0] || '') ?? '',
+    () =>
+      lastWeightForExercise(strengthLog, presetExercise || exerciseNames[0] || '', history) ?? '',
   )
   const [reps, setReps] = useState(8)
   const [rpe, setRpe] = useState(9)
@@ -68,7 +72,7 @@ export function LogScreen() {
   const [prevExercise, setPrevExercise] = useState(exercise)
   if (exercise !== prevExercise) {
     setPrevExercise(exercise)
-    setWeightKg(lastWeightForExercise(strengthLog, exercise) ?? '')
+    setWeightKg(lastWeightForExercise(strengthLog, exercise, history) ?? '')
   }
 
   // ---- run form ----

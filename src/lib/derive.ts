@@ -3,13 +3,17 @@ import type {
   ScheduleDay,
   DayName,
   RunDay,
+  StrengthDay,
   StretchingRoutine,
   ChecklistKey,
+  Range,
 } from '@/types/plan'
 import type {
   DailyChecklistRecord,
   RunLogEntry,
   StrengthLogEntry,
+  StrengthSet,
+  SetKind,
   CheckIn,
   IsoDate,
 } from '@/types/userData'
@@ -234,19 +238,141 @@ export function postWorkoutStretchFor(
 
 // ---- Strength log helpers ----
 
-/** Last logged top-set weight for an exercise (prefill after-workout forms). */
+export interface WeightHistoryOptions {
+  /**
+   * Exclude one session's own entries. Without this an in-progress session seeds its
+   * own suggestions — log a 30kg warmup and the next suggestion becomes 30kg.
+   */
+  excludeSessionId?: string
+}
+
+/**
+ * Last logged top *working* weight for an exercise (prefills load suggestions and forms).
+ *
+ * Warmup sets never count, and an entry made up only of warmups is skipped entirely rather
+ * than resolving to `undefined` — that is what makes an abandoned warmup-only session
+ * fall through to the last real working set instead of erasing the history.
+ * Legacy sets carry no `kind` and count as working (see setKind).
+ */
 export function lastWeightForExercise(
   strengthLog: StrengthLogEntry[],
   exerciseName: string,
+  options: WeightHistoryOptions = {},
 ): number | undefined {
   const entries = strengthLog
-    .filter((e) => e.exerciseName === exerciseName)
+    .filter(
+      (e) =>
+        e.exerciseName === exerciseName &&
+        (options.excludeSessionId == null || e.sessionId !== options.excludeSessionId),
+    )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const top = entries[0]?.sets.reduce<number | undefined>(
-    (max, s) => (max == null || s.weightKg > max ? s.weightKg : max),
-    undefined,
-  )
-  return top
+
+  for (const entry of entries) {
+    const top = entry.sets
+      .filter((s) => setKind(s) === 'working')
+      .reduce<number | undefined>(
+        (max, s) => (max == null || s.weightKg > max ? s.weightKg : max),
+        undefined,
+      )
+    if (top != null) return top
+  }
+  return undefined
+}
+
+// ---- Workout session helpers ----
+
+/**
+ * Warmup/working discriminator with the backwards-compatible default: entries written
+ * before the session flow have no `kind`, and every one of them was a working set.
+ */
+export function setKind(s: StrengthSet): SetKind {
+  return s.kind ?? 'working'
+}
+
+/** The entry a session owns for one exercise (never matches ad-hoc Log-screen entries). */
+export function sessionEntry(
+  strengthLog: StrengthLogEntry[],
+  sessionId: string,
+  exerciseName: string,
+): StrengthLogEntry | undefined {
+  return strengthLog.find((e) => e.sessionId === sessionId && e.exerciseName === exerciseName)
+}
+
+export function sessionSets(
+  strengthLog: StrengthLogEntry[],
+  sessionId: string,
+  exerciseName: string,
+): StrengthSet[] {
+  return sessionEntry(strengthLog, sessionId, exerciseName)?.sets ?? []
+}
+
+export interface ExerciseProgress {
+  exerciseName: string
+  warmupDone: number
+  workingDone: number
+  warmupTarget: number
+  workingTarget: number
+  done: boolean
+}
+
+/** Per-exercise warmup/working counts for a session, in the plan's exercise order. */
+export function sessionProgress(
+  day: StrengthDay,
+  strengthLog: StrengthLogEntry[],
+  sessionId: string,
+): ExerciseProgress[] {
+  return day.exercises.map((ex) => {
+    const sets = sessionSets(strengthLog, sessionId, ex.name)
+    const warmupDone = sets.filter((s) => setKind(s) === 'warmup').length
+    const workingDone = sets.length - warmupDone
+    return {
+      exerciseName: ex.name,
+      warmupDone,
+      workingDone,
+      warmupTarget: ex.warmupSets,
+      workingTarget: ex.workingSets,
+      done: workingDone >= ex.workingSets,
+    }
+  })
+}
+
+/** "6-10" -> {min:6,max:10}. Non-numeric ranges like "controlled" -> undefined. */
+export function parseRepRange(repRange: string): Range | undefined {
+  const m = repRange.match(/(\d+)\s*-\s*(\d+)/)
+  if (!m || !m[1] || !m[2]) return undefined
+  return { min: Number(m[1]), max: Number(m[2]) }
+}
+
+const FALLBACK_REPS = 10
+
+/** Mid-point of the prescribed rep range, used to seed the set editor. */
+export function defaultRepsFor(repRange: string): number {
+  const r = parseRepRange(repRange)
+  if (!r) return FALLBACK_REPS
+  return Math.round((r.min + r.max) / 2)
+}
+
+/** "RPE 9-10" -> 9. Qualitative intensities like "clean reps" -> undefined. */
+export function parseIntensityRpe(intensity: string): number | undefined {
+  const m = intensity.match(/RPE\s*(\d+)/i)
+  if (!m || !m[1]) return undefined
+  return Number(m[1])
+}
+
+/** Warmups default to ~60% of the last working load, rounded to the nearest 2.5kg. */
+const WARMUP_FRACTION = 0.6
+const PLATE_STEP = 2.5
+
+export function suggestedWeight(
+  strengthLog: StrengthLogEntry[],
+  exerciseName: string,
+  kind: SetKind,
+  options: WeightHistoryOptions = {},
+): number | undefined {
+  const last = lastWeightForExercise(strengthLog, exerciseName, options)
+  if (last == null) return undefined
+  if (kind === 'working') return last
+  return Math.max(Math.round((last * WARMUP_FRACTION) / PLATE_STEP) * PLATE_STEP, PLATE_STEP)
 }
 
 /** Exercise names already logged on `date` — drives the Today workout summary counter. */

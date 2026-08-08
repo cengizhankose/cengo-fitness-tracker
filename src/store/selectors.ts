@@ -11,8 +11,10 @@ import {
   applicableChecklistKeys,
   checklistRatio,
   lastWeightForExercise,
+  sessionProgress,
+  sessionSets,
 } from '@/lib/derive'
-import type { DayName } from '@/types/plan'
+import type { DayName, StrengthDay } from '@/types/plan'
 import type { IsoDate } from '@/types/userData'
 
 // Raw slice hooks (stable references — safe to derive outside the selector).
@@ -62,7 +64,23 @@ export function useTodayChecklistRatio(today: IsoDate = toLocalISODate()) {
   return { ...checklistRatio(record, keys), keys }
 }
 
+/** History-only load suggestion — an in-progress session never seeds its own prefill. */
 export function useLastWeight(exerciseName: string) {
   const strengthLog = useStore((s) => s.strengthLog)
-  return lastWeightForExercise(strengthLog, exerciseName)
+  const activeSessionId = useStore((s) => s.activeSession?.id)
+  return lastWeightForExercise(strengthLog, exerciseName, { excludeSessionId: activeSessionId })
+}
+
+// ---- Workout session ----
+
+export const useActiveSession = () => useStore((s) => s.activeSession)
+
+export function useSessionProgress(day: StrengthDay, sessionId: string) {
+  const strengthLog = useStore((s) => s.strengthLog)
+  return sessionProgress(day, strengthLog, sessionId)
+}
+
+export function useSessionSets(sessionId: string, exerciseName: string) {
+  const strengthLog = useStore((s) => s.strengthLog)
+  return sessionSets(strengthLog, sessionId, exerciseName)
 }

@@ -64,6 +64,7 @@ beforeEach(() => {
     strengthLog: [],
     runLog: [],
     benchmark: undefined,
+    activeSession: undefined,
   })
 })
 

@@ -30,18 +30,41 @@ export interface CheckIn {
 }
 
 // ---- Strength log ----
+/** Warmup vs working set. Absent on pre-session entries -> treat as 'working'. */
+export type SetKind = 'warmup' | 'working'
+
 export interface StrengthSet {
+  id?: string // absent on legacy sets; fall back to the array index
   weightKg: number
   reps: number
   rpe?: number
+  kind?: SetKind // absent => 'working' (see setKind() in lib/derive)
 }
 export interface StrengthLogEntry {
   id: string
   date: IsoDate
   exerciseName: string
   sets: StrengthSet[]
+  /** Set when the entry was written by the workout-session flow. Legacy/ad-hoc entries have none. */
+  sessionId?: string
+  updatedAt?: IsoTimestamp
   progressionNote?: string
   createdAt: IsoTimestamp
+}
+
+// ---- In-progress workout session ----
+/**
+ * Cursor only — the sets themselves are written straight to `strengthLog`, so a
+ * half-finished session can never lose data. `exerciseNames` is snapshotted at
+ * start so an edit to plan.json mid-session can't shift the cursor.
+ */
+export interface ActiveSession {
+  id: string
+  date: IsoDate
+  dayName: DayName
+  exerciseNames: string[]
+  currentIndex: number
+  startedAt: IsoTimestamp
 }
 
 // ---- Run log ----
