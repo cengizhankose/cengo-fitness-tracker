@@ -8,6 +8,7 @@ import { MetricInput } from '@/components/MetricInput'
 import { TimeInput } from '@/components/TimeInput'
 import { NumberStepper } from '@/components/NumberStepper'
 import { EmptyState } from '@/components/EmptyState'
+import { ExerciseCombobox } from '@/components/ExerciseCombobox'
 import { Badge } from '@/components/Badge'
 import { plan } from '@/lib/plan'
 import { scheduleForDate, lastWeightForExercise } from '@/lib/derive'
@@ -66,6 +67,14 @@ export function LogScreen() {
   const [reps, setReps] = useState(8)
   const [rpe, setRpe] = useState(9)
   const [note, setNote] = useState('')
+
+  // An exercise that is not in the plan (a preset from the query string) stays
+  // selectable rather than being silently swapped for a catalog entry.
+  const exerciseOptions = useMemo(
+    () =>
+      exercise && !exerciseNames.includes(exercise) ? [exercise, ...exerciseNames] : exerciseNames,
+    [exercise, exerciseNames],
+  )
 
   // Prefill weight from the last logged set when the chosen exercise changes
   // (adjust-state-on-change pattern — runs during render, no effect).
@@ -237,25 +246,12 @@ export function LogScreen() {
 
         {tab === 'strength' ? (
           <SectionCard title="Log a set" icon={Dumbbell} accent="var(--color-volt)">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                Exercise
-              </span>
-              <select
-                value={exercise}
-                onChange={(e) => setExercise(e.target.value)}
-                className="rounded-md border border-border bg-surface-2 px-3 py-3 text-text outline-none focus:border-volt"
-              >
-                {!exerciseNames.includes(exercise) && exercise && (
-                  <option value={exercise}>{exercise}</option>
-                )}
-                {exerciseNames.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ExerciseCombobox
+              label="Exercise"
+              value={exercise}
+              options={exerciseOptions}
+              onChange={setExercise}
+            />
             <div className="mt-3 grid grid-cols-1 gap-3">
               <MetricInput label="Weight" unit="kg" value={weightKg} onChange={setWeightKg} />
               <div className="grid grid-cols-2 gap-3">
