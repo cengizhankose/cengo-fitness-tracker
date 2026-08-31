@@ -1,0 +1,859 @@
+{
+  "meta": {
+    "planName": "Istanbul Marathon 2026",
+    "version": "1.0",
+    "startDate": "2026-08-31",
+    "raceDate": "2026-11-01",
+    "raceName": "Istanbul Marathon",
+    "raceDistanceKm": 42.2,
+    "totalWeeks": 9,
+    "paceZoneKeys": [
+      "Easy",
+      "Marathon",
+      "Threshold",
+      "Interval",
+      "Repetition"
+    ],
+    "nutritionPhases": [
+      {
+        "key": "CUT",
+        "label": "Cut",
+        "startDate": "2026-08-31",
+        "endDate": "2026-10-11",
+        "intent": "Moderate deficit — continue the existing cut through base and build weeks."
+      },
+      {
+        "key": "MAINTENANCE_TRANSITION",
+        "label": "Maintenance transition",
+        "startDate": "2026-10-12",
+        "endDate": "2026-10-18",
+        "intent": "Return to maintenance calories to support the peak week."
+      },
+      {
+        "key": "PERFORMANCE",
+        "label": "Performance / Maintenance",
+        "startDate": "2026-10-19",
+        "endDate": "2026-11-01",
+        "intent": "Maintenance calories, fuelling prioritised through taper and race day."
+      }
+    ]
+  },
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "startDate": "2026-08-31",
+      "endDate": "2026-09-06",
+      "focus": "Base re-entry",
+      "targetVolumeKm": {
+        "min": 35,
+        "max": 40
+      },
+      "qualitySummary": "3 × 8 min @ Threshold, 2 min jog float",
+      "longRunKm": 16,
+      "days": [
+        {
+          "date": "2026-08-31",
+          "dayName": "Monday",
+          "weekNumber": 1,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-01",
+          "dayName": "Tuesday",
+          "weekNumber": 1,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-09-02",
+          "dayName": "Wednesday",
+          "weekNumber": 1,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 8,
+          "targetDurationMin": 24,
+          "paceZone": "Threshold",
+          "description": "3 × 8 min @ Threshold, 2 min jog float"
+        },
+        {
+          "date": "2026-09-03",
+          "dayName": "Thursday",
+          "weekNumber": 1,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-09-04",
+          "dayName": "Friday",
+          "weekNumber": 1,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-05",
+          "dayName": "Saturday",
+          "weekNumber": 1,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-09-06",
+          "dayName": "Sunday",
+          "weekNumber": 1,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 16,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "16 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "startDate": "2026-09-07",
+      "endDate": "2026-09-13",
+      "focus": "Volume build",
+      "targetVolumeKm": {
+        "min": 40,
+        "max": 44
+      },
+      "qualitySummary": "2 × 12 min @ Threshold, 2 min jog float",
+      "longRunKm": 19,
+      "days": [
+        {
+          "date": "2026-09-07",
+          "dayName": "Monday",
+          "weekNumber": 2,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-08",
+          "dayName": "Tuesday",
+          "weekNumber": 2,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-09-09",
+          "dayName": "Wednesday",
+          "weekNumber": 2,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 9,
+          "targetDurationMin": 24,
+          "paceZone": "Threshold",
+          "description": "2 × 12 min @ Threshold, 2 min jog float"
+        },
+        {
+          "date": "2026-09-10",
+          "dayName": "Thursday",
+          "weekNumber": 2,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-09-11",
+          "dayName": "Friday",
+          "weekNumber": 2,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-12",
+          "dayName": "Saturday",
+          "weekNumber": 2,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-09-13",
+          "dayName": "Sunday",
+          "weekNumber": 2,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 19,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "19 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 3,
+      "startDate": "2026-09-14",
+      "endDate": "2026-09-20",
+      "focus": "Threshold density",
+      "targetVolumeKm": {
+        "min": 43,
+        "max": 47
+      },
+      "qualitySummary": "4 × 8 min @ Threshold, 2 min jog float",
+      "longRunKm": 22,
+      "days": [
+        {
+          "date": "2026-09-14",
+          "dayName": "Monday",
+          "weekNumber": 3,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-15",
+          "dayName": "Tuesday",
+          "weekNumber": 3,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-09-16",
+          "dayName": "Wednesday",
+          "weekNumber": 3,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 10,
+          "targetDurationMin": 32,
+          "paceZone": "Threshold",
+          "description": "4 × 8 min @ Threshold, 2 min jog float"
+        },
+        {
+          "date": "2026-09-17",
+          "dayName": "Thursday",
+          "weekNumber": 3,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-09-18",
+          "dayName": "Friday",
+          "weekNumber": 3,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-19",
+          "dayName": "Saturday",
+          "weekNumber": 3,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 3,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "3 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-09-20",
+          "dayName": "Sunday",
+          "weekNumber": 3,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 22,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "22 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 4,
+      "startDate": "2026-09-21",
+      "endDate": "2026-09-27",
+      "focus": "Peak threshold block",
+      "targetVolumeKm": {
+        "min": 46,
+        "max": 50
+      },
+      "qualitySummary": "3 × 10 min @ Threshold, 2 min jog float",
+      "longRunKm": 24,
+      "days": [
+        {
+          "date": "2026-09-21",
+          "dayName": "Monday",
+          "weekNumber": 4,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-22",
+          "dayName": "Tuesday",
+          "weekNumber": 4,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-09-23",
+          "dayName": "Wednesday",
+          "weekNumber": 4,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 11,
+          "targetDurationMin": 30,
+          "paceZone": "Threshold",
+          "description": "3 × 10 min @ Threshold, 2 min jog float"
+        },
+        {
+          "date": "2026-09-24",
+          "dayName": "Thursday",
+          "weekNumber": 4,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-09-25",
+          "dayName": "Friday",
+          "weekNumber": 4,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-26",
+          "dayName": "Saturday",
+          "weekNumber": 4,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 3,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "3 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-09-27",
+          "dayName": "Sunday",
+          "weekNumber": 4,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 24,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "24 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 5,
+      "startDate": "2026-09-28",
+      "endDate": "2026-10-04",
+      "focus": "Recovery week",
+      "targetVolumeKm": {
+        "min": 38,
+        "max": 42
+      },
+      "qualitySummary": "20–25 min continuous @ Threshold",
+      "longRunKm": 18,
+      "days": [
+        {
+          "date": "2026-09-28",
+          "dayName": "Monday",
+          "weekNumber": 5,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-09-29",
+          "dayName": "Tuesday",
+          "weekNumber": 5,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-09-30",
+          "dayName": "Wednesday",
+          "weekNumber": 5,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 8,
+          "targetDurationMin": 22,
+          "paceZone": "Threshold",
+          "description": "20–25 min continuous @ Threshold"
+        },
+        {
+          "date": "2026-10-01",
+          "dayName": "Thursday",
+          "weekNumber": 5,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-10-02",
+          "dayName": "Friday",
+          "weekNumber": 5,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-03",
+          "dayName": "Saturday",
+          "weekNumber": 5,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-10-04",
+          "dayName": "Sunday",
+          "weekNumber": 5,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 18,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "18 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 6,
+      "startDate": "2026-10-05",
+      "endDate": "2026-10-11",
+      "focus": "Marathon-pace specificity",
+      "targetVolumeKm": {
+        "min": 50,
+        "max": 55
+      },
+      "qualitySummary": "3 × 3 km @ Marathon pace, 800 m jog float",
+      "longRunKm": 28,
+      "days": [
+        {
+          "date": "2026-10-05",
+          "dayName": "Monday",
+          "weekNumber": 6,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-06",
+          "dayName": "Tuesday",
+          "weekNumber": 6,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-10-07",
+          "dayName": "Wednesday",
+          "weekNumber": 6,
+          "title": "Marathon Pace",
+          "workoutType": "MARATHON_PACE",
+          "targetDistanceKm": 14,
+          "targetDurationMin": null,
+          "paceZone": "Marathon",
+          "description": "3 × 3 km @ Marathon pace, 800 m jog float"
+        },
+        {
+          "date": "2026-10-08",
+          "dayName": "Thursday",
+          "weekNumber": 6,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km easy, conversational effort."
+        },
+        {
+          "date": "2026-10-09",
+          "dayName": "Friday",
+          "weekNumber": 6,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-10",
+          "dayName": "Saturday",
+          "weekNumber": 6,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 3,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "3 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-10-11",
+          "dayName": "Sunday",
+          "weekNumber": 6,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 28,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "28 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 7,
+      "startDate": "2026-10-12",
+      "endDate": "2026-10-18",
+      "focus": "Peak week",
+      "targetVolumeKm": {
+        "min": 52,
+        "max": 58
+      },
+      "qualitySummary": "2 × 5 km @ Marathon pace, 1 km jog float",
+      "longRunKm": 30,
+      "days": [
+        {
+          "date": "2026-10-12",
+          "dayName": "Monday",
+          "weekNumber": 7,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-13",
+          "dayName": "Tuesday",
+          "weekNumber": 7,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-10-14",
+          "dayName": "Wednesday",
+          "weekNumber": 7,
+          "title": "Marathon Pace",
+          "workoutType": "MARATHON_PACE",
+          "targetDistanceKm": 15,
+          "targetDurationMin": null,
+          "paceZone": "Marathon",
+          "description": "2 × 5 km @ Marathon pace, 1 km jog float"
+        },
+        {
+          "date": "2026-10-15",
+          "dayName": "Thursday",
+          "weekNumber": 7,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km easy, conversational effort."
+        },
+        {
+          "date": "2026-10-16",
+          "dayName": "Friday",
+          "weekNumber": 7,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-17",
+          "dayName": "Saturday",
+          "weekNumber": 7,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 3,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "3 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-10-18",
+          "dayName": "Sunday",
+          "weekNumber": 7,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 30,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "30 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 8,
+      "startDate": "2026-10-19",
+      "endDate": "2026-10-25",
+      "focus": "Taper",
+      "targetVolumeKm": {
+        "min": 35,
+        "max": 40
+      },
+      "qualitySummary": "2 × 8 min @ Threshold (taper), 2 min jog float",
+      "longRunKm": 19,
+      "days": [
+        {
+          "date": "2026-10-19",
+          "dayName": "Monday",
+          "weekNumber": 8,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-20",
+          "dayName": "Tuesday",
+          "weekNumber": 8,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-10-21",
+          "dayName": "Wednesday",
+          "weekNumber": 8,
+          "title": "Threshold",
+          "workoutType": "THRESHOLD",
+          "targetDistanceKm": 8,
+          "targetDurationMin": 16,
+          "paceZone": "Threshold",
+          "description": "2 × 8 min @ Threshold (taper), 2 min jog float"
+        },
+        {
+          "date": "2026-10-22",
+          "dayName": "Thursday",
+          "weekNumber": 8,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km easy, conversational effort."
+        },
+        {
+          "date": "2026-10-23",
+          "dayName": "Friday",
+          "weekNumber": 8,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-24",
+          "dayName": "Saturday",
+          "weekNumber": 8,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 3,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "3 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-10-25",
+          "dayName": "Sunday",
+          "weekNumber": 8,
+          "title": "Long Run",
+          "workoutType": "LONG_RUN",
+          "targetDistanceKm": 19,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "19 km long run, steady easy effort throughout."
+        }
+      ]
+    },
+    {
+      "weekNumber": 9,
+      "startDate": "2026-10-26",
+      "endDate": "2026-11-01",
+      "focus": "Race week",
+      "targetVolumeKm": null,
+      "qualitySummary": "3 × 1 km @ Marathon pace activation, full recovery",
+      "longRunKm": 42.2,
+      "days": [
+        {
+          "date": "2026-10-26",
+          "dayName": "Monday",
+          "weekNumber": 9,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-27",
+          "dayName": "Tuesday",
+          "weekNumber": 9,
+          "title": "Easy + Strides",
+          "workoutType": "STRIDES",
+          "targetDistanceKm": 6,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "6 km easy with 6 × 20s relaxed strides, full recovery between reps."
+        },
+        {
+          "date": "2026-10-28",
+          "dayName": "Wednesday",
+          "weekNumber": 9,
+          "title": "Marathon Pace",
+          "workoutType": "MARATHON_PACE",
+          "targetDistanceKm": 8,
+          "targetDurationMin": null,
+          "paceZone": "Marathon",
+          "description": "3 × 1 km @ Marathon pace activation, full recovery"
+        },
+        {
+          "date": "2026-10-29",
+          "dayName": "Thursday",
+          "weekNumber": 9,
+          "title": "Easy Run",
+          "workoutType": "EASY",
+          "targetDistanceKm": 5,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "5 km easy, conversational effort."
+        },
+        {
+          "date": "2026-10-30",
+          "dayName": "Friday",
+          "weekNumber": 9,
+          "title": "Rest",
+          "workoutType": "REST",
+          "targetDistanceKm": null,
+          "targetDurationMin": null,
+          "paceZone": null,
+          "description": "Rest or easy mobility — see the morning mobility routine."
+        },
+        {
+          "date": "2026-10-31",
+          "dayName": "Saturday",
+          "weekNumber": 9,
+          "title": "Very Easy",
+          "workoutType": "EASY",
+          "targetDistanceKm": 4,
+          "targetDurationMin": null,
+          "paceZone": "Easy",
+          "description": "4 km very easy shakeout, keep it relaxed."
+        },
+        {
+          "date": "2026-11-01",
+          "dayName": "Sunday",
+          "weekNumber": 9,
+          "title": "Istanbul Marathon",
+          "workoutType": "RACE",
+          "targetDistanceKm": 42.2,
+          "targetDurationMin": null,
+          "paceZone": "Marathon",
+          "description": "Race day — 42.2 km at Marathon pace. Good luck!"
+        }
+      ]
+    }
+  ]
+}

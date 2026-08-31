@@ -83,6 +83,7 @@ beforeEach(async () => {
     runLog: [],
     benchmark: undefined,
     activeSession: undefined,
+    marathonStatus: {},
   })
 })
 

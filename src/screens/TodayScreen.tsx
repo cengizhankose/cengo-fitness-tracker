@@ -16,6 +16,7 @@ import { StreakHeader } from '@/components/StreakHeader'
 import { SectionCard } from '@/components/SectionCard'
 import { CollapsibleSection } from '@/components/CollapsibleSection'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
+import { MarathonTodayCard } from '@/components/MarathonTodayCard'
 import { ChecklistItem } from '@/components/ChecklistItem'
 import { NutritionTargets } from '@/components/NutritionTargets'
 import { MealCard } from '@/components/MealCard'
@@ -191,6 +192,7 @@ export function TodayScreen() {
           open={workoutOpen}
           onOpenChange={(open) => setSection('workout', open)}
         />
+        <MarathonTodayCard />
         {task.type === 'strength' && !activeSession && (
           <button
             type="button"

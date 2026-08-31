@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { WeeklyScreen } from '@/screens/WeeklyScreen'
@@ -21,23 +21,33 @@ describe('WeeklyScreen / DayCard', () => {
       </MemoryRouter>,
     )
 
-  it('opens today by default and keeps aria wiring intact', () => {
+  /** D8 collapses the legacy weekly template behind one section, closed on every visit. */
+  async function openLegacySection(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Strength & Football Week/i }))
+    return within(document.querySelector('[data-section="legacy-plan"]') as HTMLElement)
+  }
+
+  it('opens today by default and keeps aria wiring intact', async () => {
+    const user = userEvent.setup()
     renderWeekly()
-    const monday = screen.getByRole('button', { name: /mon/i })
+    const legacy = await openLegacySection(user)
+
+    const monday = legacy.getByRole('button', { name: /mon/i })
     expect(monday).toHaveAttribute('aria-expanded', 'true')
     expect(document.getElementById(monday.getAttribute('aria-controls')!)).not.toBeNull()
-    expect(screen.getByText('Incline Dumbbell Press')).toBeInTheDocument()
+    expect(legacy.getByText('Incline Dumbbell Press')).toBeInTheDocument()
   })
 
   it('collapses and expands days', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderWeekly()
+    const legacy = await openLegacySection(user)
 
-    await user.click(screen.getByRole('button', { name: /mon/i }))
-    expect(screen.queryByText('Incline Dumbbell Press')).not.toBeInTheDocument()
+    await user.click(legacy.getByRole('button', { name: /mon/i }))
+    expect(legacy.queryByText('Incline Dumbbell Press')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /wed/i }))
-    expect(screen.getByRole('button', { name: /wed/i })).toHaveAttribute('aria-expanded', 'true')
+    await user.click(legacy.getByRole('button', { name: /wed/i }))
+    expect(legacy.getByRole('button', { name: /wed/i })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('has no axe violations', async () => {

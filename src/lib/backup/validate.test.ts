@@ -189,6 +189,151 @@ describe('validateBackup', () => {
   })
 })
 
+describe('marathonStatus — additive, backward compatible (Slice 9)', () => {
+  it('a backup without state.marathonStatus validates clean -> {}, no issue reported', () => {
+    const state = populatedState()
+    const withoutKey = { ...state } as Record<string, unknown>
+    delete withoutKey['marathonStatus']
+    const doc = backupDoc({ state: withoutKey })
+    const result = validateBackup(doc)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state.marathonStatus).toEqual({})
+  })
+
+  it('rejects an explicit null — only undefined/missing is the backward-compatible legacy case', () => {
+    const state = populatedState()
+    const doc = backupDoc({ state: { ...state, marathonStatus: null } })
+    const result = validateBackup(doc)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('E_INVALID')
+    expect(result.error.issues?.[0]?.path).toBe('state.marathonStatus')
+  })
+
+  it('accepts a well-formed entry', () => {
+    const state = populatedState()
+    const doc = backupDoc({
+      state: {
+        ...state,
+        marathonStatus: {
+          '2026-09-02': {
+            date: '2026-09-02',
+            status: 'completed',
+            notes: 'felt strong',
+            updatedAt: '2026-09-02T19:00:00.000Z',
+          },
+        },
+      },
+    })
+    const result = validateBackup(doc)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state.marathonStatus['2026-09-02']).toEqual({
+      date: '2026-09-02',
+      status: 'completed',
+      notes: 'felt strong',
+      updatedAt: '2026-09-02T19:00:00.000Z',
+    })
+  })
+
+  it('rejects the way checklist is: non-object map, bad date key, date !== key', () => {
+    const state = populatedState()
+    expect(codeOf(backupDoc({ state: { ...state, marathonStatus: 'nope' } }))).toBe('E_INVALID')
+    expect(
+      codeOf(
+        backupDoc({
+          state: {
+            ...state,
+            marathonStatus: { 'not-a-date': { date: 'not-a-date', status: 'completed', updatedAt: '2026-09-02T19:00:00.000Z' } },
+          },
+        }),
+      ),
+    ).toBe('E_INVALID')
+    expect(
+      codeOf(
+        backupDoc({
+          state: {
+            ...state,
+            marathonStatus: {
+              '2026-09-02': { date: '2026-09-03', status: 'completed', updatedAt: '2026-09-02T19:00:00.000Z' },
+            },
+          },
+        }),
+      ),
+    ).toBe('E_INVALID')
+  })
+
+  it('rejects a bad status string', () => {
+    const state = populatedState()
+    const doc = backupDoc({
+      state: {
+        ...state,
+        marathonStatus: {
+          '2026-09-02': { date: '2026-09-02', status: 'done', updatedAt: '2026-09-02T19:00:00.000Z' },
+        },
+      },
+    })
+    expect(codeOf(doc)).toBe('E_INVALID')
+    expect(firstIssuePath(doc)).toBe('state.marathonStatus["2026-09-02"].status')
+  })
+
+  it('rejects a missing or non-canonical updatedAt', () => {
+    const state = populatedState()
+    expect(
+      codeOf(
+        backupDoc({
+          state: { ...state, marathonStatus: { '2026-09-02': { date: '2026-09-02', status: 'completed' } } },
+        }),
+      ),
+    ).toBe('E_INVALID')
+    expect(
+      codeOf(
+        backupDoc({
+          state: {
+            ...state,
+            marathonStatus: {
+              '2026-09-02': { date: '2026-09-02', status: 'completed', updatedAt: '2026-09-02T19:00:00Z' },
+            },
+          },
+        }),
+      ),
+    ).toBe('E_INVALID')
+  })
+
+  it('rejects a __proto__ key', () => {
+    const state = populatedState()
+    const marathonStatus = JSON.parse(
+      '{"__proto__":{"date":"2026-09-02","status":"completed","updatedAt":"2026-09-02T19:00:00.000Z"}}',
+    ) as Record<string, unknown>
+    expect(codeOf(backupDoc({ state: { ...state, marathonStatus } }))).toBe('E_INVALID')
+  })
+
+  it('caps entries at MAX_MAP_ENTRIES', () => {
+    const state = populatedState()
+    const big = Object.fromEntries(Array.from({ length: MAX_MAP_ENTRIES + 1 }, (_, i) => [`key-${i}`, {}]))
+    expect(codeOf(backupDoc({ state: { ...state, marathonStatus: big } }))).toBe('E_INVALID')
+  })
+
+  it('rejects an oversized notes field', () => {
+    const state = populatedState()
+    const doc = backupDoc({
+      state: {
+        ...state,
+        marathonStatus: {
+          '2026-09-02': {
+            date: '2026-09-02',
+            status: 'completed',
+            notes: 'x'.repeat(10_001),
+            updatedAt: '2026-09-02T19:00:00.000Z',
+          },
+        },
+      },
+    })
+    expect(codeOf(doc)).toBe('E_INVALID')
+  })
+})
+
 describe('photo entries are validated strictly, before anything is written', () => {
   const KEY = 'photo:2026-08-03:front'
 

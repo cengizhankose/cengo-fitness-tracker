@@ -220,8 +220,74 @@ describe('replace mode', () => {
     expect(next.strengthLog).toEqual([])
     expect(next.runLog.map((e) => e.id)).toEqual(['r9'])
     expect(next.benchmark).toBeUndefined()
+    expect(next.marathonStatus).toEqual({})
     expect(report.added).toBe(1)
-    expect(report.removed).toBe(6)
+    // populatedState() carries one marathonStatus record alongside the other 6 (Slice 9).
+    expect(report.removed).toBe(7)
+  })
+})
+
+describe('marathonStatus (Slice 9)', () => {
+  const rec = (date: string, status: 'completed' | 'skipped', updatedAt: string, notes?: string) => ({
+    date,
+    status,
+    notes,
+    updatedAt,
+  })
+
+  it('merge mode: newer updatedAt wins', () => {
+    const local = makeState({
+      marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z') },
+    })
+    const incoming = makeState({
+      marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', '2026-09-02T18:00:00.000Z') },
+    })
+    const { next } = mergeState(local, incoming, opts())
+    expect(next.marathonStatus['2026-09-02']?.status).toBe('skipped')
+  })
+
+  it('merge mode: a tie keeps local', () => {
+    const t = '2026-09-02T10:00:00.000Z'
+    const local = makeState({ marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', t) } })
+    const incoming = makeState({ marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', t) } })
+    const { next } = mergeState(local, incoming, opts())
+    expect(next.marathonStatus['2026-09-02']?.status).toBe('completed')
+  })
+
+  it('merge mode: adds a date the local state has never seen', () => {
+    const local = makeState()
+    const incoming = makeState({
+      marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z') },
+    })
+    const { next, report } = mergeState(local, incoming, opts())
+    expect(Object.keys(next.marathonStatus)).toEqual(['2026-09-02'])
+    expect(report.added).toBe(1)
+  })
+
+  it('replace mode takes the incoming map wholesale', () => {
+    const local = makeState({
+      marathonStatus: { '2026-08-31': rec('2026-08-31', 'completed', '2026-08-31T10:00:00.000Z') },
+    })
+    const incoming = makeState({
+      marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', '2026-09-02T10:00:00.000Z') },
+    })
+    const { next } = mergeState(local, incoming, opts({ mode: 'replace' }))
+    expect(Object.keys(next.marathonStatus)).toEqual(['2026-09-02'])
+  })
+
+  it('report.added/updated count marathon records via recordEntries', () => {
+    const local = makeState({
+      marathonStatus: { '2026-08-31': rec('2026-08-31', 'completed', '2026-08-31T10:00:00.000Z') },
+    })
+    const incoming = makeState({
+      marathonStatus: {
+        '2026-08-31': rec('2026-08-31', 'skipped', '2026-08-31T18:00:00.000Z'),
+        '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z'),
+      },
+    })
+    const { report } = mergeState(local, incoming, opts())
+    expect(report.added).toBe(1)
+    expect(report.updated).toBe(1)
   })
 })
 

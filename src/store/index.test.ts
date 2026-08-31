@@ -196,6 +196,7 @@ describe('migrateState (v1 -> v2)', () => {
     ],
     runLog: [],
     benchmark: undefined,
+    marathonStatus: {},
     _schemaVersion: 1,
   })
 

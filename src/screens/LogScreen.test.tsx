@@ -6,6 +6,7 @@ import { LogScreen } from '@/screens/LogScreen'
 import { ToastHost } from '@/components/ToastHost'
 import { useStore } from '@/store'
 import { useToast } from '@/store/toast'
+import { toLocalISODate } from '@/lib/dates'
 
 const BENCHMARK_ROUTE = '/log?type=run&benchmark=1'
 
@@ -14,6 +15,7 @@ function renderLog(route: string) {
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="/" element={<div>today screen</div>} />
+        <Route path="/weekly" element={<div>plan screen</div>} />
         <Route path="/log" element={<LogScreen />} />
       </Routes>
       <ToastHost />
@@ -205,5 +207,136 @@ describe('LogScreen — plain run mode is unchanged', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/distance/i)
     expect(state().runLog).toHaveLength(0)
+  })
+})
+
+describe('LogScreen — marathon date + context (Slice 6)', () => {
+  beforeEach(() => {
+    useStore.setState({ benchmark: undefined, runLog: [], strengthLog: [], checklist: {}, marathonStatus: {} })
+    useToast.setState({ toasts: [] })
+    localStorage.clear()
+  })
+
+  it('no date param -> identical behaviour to today: entry date is toLocalISODate()', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run')
+
+    await user.type(screen.getByLabelText(/^Distance/), '8')
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+
+    expect(state().runLog[0]?.date).toBe(toLocalISODate())
+  })
+
+  it('a marathon date param prefills distance, saves the entry against that date, and names the date in the subtitle', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&date=2026-09-02')
+
+    expect(screen.getByLabelText(/^Distance/)).toHaveValue(8)
+    expect(screen.getByText(/Logging for/)).toHaveTextContent('Wed 2 Sep')
+
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+    expect(state().runLog[0]?.date).toBe('2026-09-02')
+  })
+
+  it('shows a read-only planned-workout banner with no extra inputs', () => {
+    const noParam = renderLog('/log?type=run')
+    const baseInputCount = noParam.container.querySelectorAll('input').length
+    noParam.unmount()
+
+    const withParam = renderLog('/log?type=run&date=2026-09-02')
+    expect(screen.getByText('Threshold')).toBeInTheDocument()
+    expect(screen.getByText(/8 km/)).toBeInTheDocument()
+    expect(screen.getByText(/Threshold zone/)).toBeInTheDocument()
+    expect(withParam.container.querySelectorAll('input').length).toBe(baseInputCount)
+  })
+
+  it('does not prefill duration or pace from the plan', () => {
+    renderLog('/log?type=run&date=2026-09-02')
+    expect(screen.getByLabelText(/^Duration/)).toHaveValue(null)
+    expect(screen.getByPlaceholderText(/auto from distance/)).toHaveValue('')
+  })
+
+  it.each(['garbage', '2026-13-40'])(
+    'falls back to today for a malformed date %s — no crash, no banner',
+    (bad) => {
+      renderLog(`/log?type=run&date=${bad}`)
+      expect(screen.getByLabelText(/^Distance/)).toHaveValue(null)
+      expect(screen.queryByText(/Logging for/)).not.toBeInTheDocument()
+    },
+  )
+
+  it('a syntactically valid but out-of-plan date is still used (no banner, no crash, no invalid date written)', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&date=2025-01-01')
+
+    expect(screen.queryByText('Threshold')).not.toBeInTheDocument()
+    expect(screen.getByText(/Logging for/)).toHaveTextContent(/1 Jan/)
+
+    await user.type(screen.getByLabelText(/^Distance/), '5')
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+    expect(state().runLog[0]?.date).toBe('2025-01-01')
+  })
+
+  it('from=plan returns to /weekly after a successful save', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&date=2026-09-02&from=plan')
+
+    await user.type(screen.getByLabelText(/^Distance/), '8')
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+
+    expect(await screen.findByText('plan screen')).toBeInTheDocument()
+  })
+
+  it('from=today returns to / after a successful save', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&date=2026-09-02&from=today')
+
+    await user.type(screen.getByLabelText(/^Distance/), '8')
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+
+    expect(await screen.findByText('today screen')).toBeInTheDocument()
+  })
+
+  it('an unknown from stays put', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&date=2026-09-02&from=nowhere')
+
+    await user.type(screen.getByLabelText(/^Distance/), '8')
+    await user.click(screen.getByRole('button', { name: /Save run/ }))
+
+    expect(screen.queryByText('today screen')).not.toBeInTheDocument()
+    expect(screen.queryByText('plan screen')).not.toBeInTheDocument()
+  })
+
+  it('?benchmark=1 is unaffected: fixes 5km and navigates to / regardless of from', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&benchmark=1&date=2026-09-02')
+
+    await user.type(screen.getByLabelText(/^Time/), '24:30')
+    await user.click(screen.getByRole('button', { name: /Save benchmark/ }))
+
+    expect(state().runLog[0]?.distanceKm).toBe(5)
+    expect(await screen.findByText('today screen')).toBeInTheDocument()
+  })
+
+  it('benchmark mode ignores a supplied date query param and always logs against today', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?type=run&benchmark=1&date=2026-09-02')
+
+    await user.type(screen.getByLabelText(/^Time/), '24:30')
+    await user.click(screen.getByRole('button', { name: /Save benchmark/ }))
+
+    expect(state().benchmark?.date).toBe(toLocalISODate())
+    expect(state().runLog[0]?.date).toBe(toLocalISODate())
+  })
+
+  it('the strength tab honours a date param too — one code path, no split behaviour', async () => {
+    const user = userEvent.setup()
+    renderLog('/log?date=2026-09-02')
+
+    await user.type(screen.getByLabelText(/^Weight/), '80')
+    await user.click(screen.getByRole('button', { name: /Save set/ }))
+
+    expect(state().strengthLog[0]?.date).toBe('2026-09-02')
   })
 })

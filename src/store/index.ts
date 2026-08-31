@@ -18,6 +18,7 @@ import { mondayOf, toLocalISODate } from '@/lib/dates'
 import { pace } from '@/lib/format'
 import { isBenchmarkDistance, isValidBenchmarkSec } from '@/lib/benchmark'
 import { setKind } from '@/lib/derive'
+import type { MarathonStatus, MarathonStatusRecord } from '@/types/marathon'
 
 export const SCHEMA_VERSION = 2
 
@@ -34,6 +35,7 @@ export const PERSISTED_KEYS = [
   'runLog',
   'benchmark',
   'activeSession',
+  'marathonStatus',
   '_schemaVersion',
 ] as const
 
@@ -119,6 +121,7 @@ export interface AppState {
   runLog: RunLogEntry[]
   benchmark?: BenchmarkResult
   activeSession?: ActiveSession
+  marathonStatus: Record<IsoDate, MarathonStatusRecord>
   _schemaVersion: number
 
   // actions
@@ -142,6 +145,10 @@ export interface AppState {
   finishSession: () => boolean
   discardSession: () => void
   upsertSessionSets: (input: SessionSetsInput) => string | undefined
+  /** Sets or replaces the day's status override. Never touches checklist/runLog/strengthLog (D5). */
+  setMarathonStatus: (date: IsoDate, status: MarathonStatus, notes?: string) => void
+  /** Removes the day's override. A no-op if none exists. */
+  clearMarathonStatus: (date: IsoDate) => void
   resetAll: () => void
 }
 
@@ -157,6 +164,7 @@ export function pickPersisted(s: AppState): PersistedState {
     runLog: s.runLog,
     benchmark: s.benchmark,
     activeSession: s.activeSession,
+    marathonStatus: s.marathonStatus,
     _schemaVersion: s._schemaVersion,
   }
 }
@@ -182,6 +190,7 @@ export const useStore = create<AppState>()(
       runLog: [],
       benchmark: undefined,
       activeSession: undefined,
+      marathonStatus: {},
       _schemaVersion: SCHEMA_VERSION,
 
       setProgramStartDate: (d) =>
@@ -396,6 +405,22 @@ export const useStore = create<AppState>()(
         return id
       },
 
+      setMarathonStatus: (date, status, notes) =>
+        set((s) => ({
+          marathonStatus: {
+            ...s.marathonStatus,
+            [date]: { date, status, notes: notes || undefined, updatedAt: nowISO() },
+          },
+        })),
+
+      clearMarathonStatus: (date) =>
+        set((s) => {
+          if (!(date in s.marathonStatus)) return {}
+          const marathonStatus = { ...s.marathonStatus }
+          delete marathonStatus[date]
+          return { marathonStatus }
+        }),
+
       resetAll: () =>
         set(() => ({
           checklist: {},
@@ -404,6 +429,7 @@ export const useStore = create<AppState>()(
           runLog: [],
           benchmark: undefined,
           activeSession: undefined,
+          marathonStatus: {},
         })),
     }),
     {

@@ -12,6 +12,7 @@ import type {
   StrengthLogEntry,
   StrengthSet,
 } from '@/types/userData'
+import type { MarathonStatusRecord } from '@/types/marathon'
 import { parseLocalISODate, toLocalISODate } from '@/lib/dates'
 import {
   FORMAT_VERSION,
@@ -237,6 +238,59 @@ function validateChecklist(raw: unknown, issues: Issues): Record<IsoDate, DailyC
       items[itemKey as ChecklistKey] = value
     }
     out[key] = { date: key, items, updatedAt }
+  }
+  return out
+}
+
+/**
+ * Additive key (D4/D9): absent entirely in every pre-marathon backup, so a
+ * missing/undefined value is the old-backup case and must validate clean, not
+ * be reported as an issue. Anything present is validated exactly as strictly
+ * as `validateChecklist`.
+ */
+function validateMarathonStatus(
+  raw: unknown,
+  issues: Issues,
+): Record<IsoDate, MarathonStatusRecord> {
+  const out: Record<IsoDate, MarathonStatusRecord> = {}
+  if (raw === undefined) return out
+  if (!isRecord(raw)) {
+    issues.add('state.marathonStatus', 'object', raw)
+    return out
+  }
+  const allKeys = Object.keys(raw)
+  if (allKeys.length > MAX_MAP_ENTRIES) {
+    issues.add('state.marathonStatus', `≤ ${MAX_MAP_ENTRIES} entries`, `${allKeys.length} entries`)
+    return out
+  }
+  for (const key of allKeys) {
+    const path = `state.marathonStatus["${key}"]`
+    if (FORBIDDEN_KEYS.has(key)) {
+      issues.add(path, 'safe map key', key)
+      continue
+    }
+    if (!isIsoDate(key)) {
+      issues.add(path, 'YYYY-MM-DD map key', key)
+      continue
+    }
+    const rec = raw[key]
+    if (!isRecord(rec)) {
+      issues.add(path, 'object', rec)
+      continue
+    }
+    if (rec['date'] !== key) {
+      issues.add(`${path}.date`, `"${key}" (must equal map key)`, rec['date'])
+      continue
+    }
+    const status = rec['status']
+    if (status !== 'completed' && status !== 'skipped') {
+      issues.add(`${path}.status`, "'completed' | 'skipped'", status)
+      continue
+    }
+    const updatedAt = requireTimestamp(rec, 'updatedAt', path, issues)
+    if (!updatedAt) continue
+    const notes = optionalNotes(rec, path, issues)
+    out[key] = { date: key, status, updatedAt, ...(notes !== undefined ? { notes } : {}) }
   }
   return out
 }
@@ -537,6 +591,7 @@ function validateState(raw: unknown, issues: Issues): PersistedState {
     runLog: [],
     benchmark: undefined,
     activeSession: undefined,
+    marathonStatus: {},
     _schemaVersion: SCHEMA_VERSION,
   }
   if (!isRecord(raw)) {
@@ -563,6 +618,7 @@ function validateState(raw: unknown, issues: Issues): PersistedState {
     runLog: validateRunLog(raw['runLog'], issues),
     benchmark: validateBenchmark(raw['benchmark'], issues),
     activeSession: validateActiveSession(raw['activeSession'], issues),
+    marathonStatus: validateMarathonStatus(raw['marathonStatus'], issues),
     _schemaVersion: SCHEMA_VERSION,
   }
 }

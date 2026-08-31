@@ -53,7 +53,7 @@ describe('SettingsScreen', () => {
 
     await user.upload(fileInput(), toFile(backupDoc()))
 
-    expect(await screen.findByText('+6')).toBeInTheDocument()
+    expect(await screen.findByText('+7')).toBeInTheDocument()
     expect(screen.getByText(/2 days · 1 check-ins · 1 strength · 1 runs/)).toBeInTheDocument()
     expect(localStorage.getItem(STORAGE_KEY)).toBe(envelope)
     expect(await entries()).toEqual([])
@@ -63,7 +63,7 @@ describe('SettingsScreen', () => {
     resetStore()
     const user = await renderScreen()
     await user.upload(fileInput(), toFile(backupDoc()))
-    await screen.findByText('+6')
+    await screen.findByText('+7')
 
     await user.click(screen.getByRole('radio', { name: /replace everything/i }))
     const importButton = screen.getByRole('button', { name: /^import$/i })
@@ -111,7 +111,7 @@ describe('SettingsScreen', () => {
     resetStore()
     const user = await renderScreen()
     await user.upload(fileInput(), toFile(backupDoc()))
-    await screen.findByText('+6')
+    await screen.findByText('+7')
 
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 

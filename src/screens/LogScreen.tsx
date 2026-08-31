@@ -12,13 +12,15 @@ import { ExerciseCombobox } from '@/components/ExerciseCombobox'
 import { Badge } from '@/components/Badge'
 import { plan } from '@/lib/plan'
 import { scheduleForDate, lastWeightForExercise } from '@/lib/derive'
-import { toLocalISODate, formatShortDate } from '@/lib/dates'
+import { toLocalISODate, formatShortDate, parseLocalISODate } from '@/lib/dates'
 import { formatDuration, pace } from '@/lib/format'
 import { BENCHMARK_DISTANCE_KM, parseBenchmarkTime } from '@/lib/benchmark'
+import { marathonPlan } from '@/lib/marathon/plan'
+import { plannedWorkoutFor } from '@/lib/marathon/derive'
 import { useStore } from '@/store'
 import { useStrengthLog, useRunLog, useActiveSession } from '@/store/selectors'
 import { useToast } from '@/store/toast'
-import type { StrengthLogEntry, RunLogEntry } from '@/types/userData'
+import type { StrengthLogEntry, RunLogEntry, IsoDate } from '@/types/userData'
 
 type Tab = 'strength' | 'run'
 const num = (v: number | '') => (v === '' ? undefined : v)
@@ -28,6 +30,17 @@ const MIN_HR = 30
 const MAX_HR = 250
 const DISTANCE_ERROR = `Enter a distance between 0 and ${MAX_DISTANCE_KM} km`
 const HR_ERROR = `Heart rate must be between ${MIN_HR} and ${MAX_HR}`
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** A civil date that actually exists — a regex match alone lets '2026-13-40' through. */
+function isValidIsoDate(v: string): boolean {
+  if (!ISO_DATE_RE.test(v)) return false
+  return toLocalISODate(parseLocalISODate(v)) === v
+}
+
+/** Where the post-save redirect can go — never a raw, attacker-controlled target. */
+const FROM_TARGETS: Record<string, string> = { plan: '/weekly', today: '/' }
 
 /** Inline field errors for the run form — the key doubles as the focus order. */
 type RunErrors = { time?: string; distance?: string; hrAvg?: string; hrMax?: string }
@@ -41,9 +54,17 @@ export function LogScreen() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const today = toLocalISODate()
-  const task = scheduleForDate(plan, new Date())
 
   const isBenchmark = params.get('benchmark') === '1'
+  // Benchmark mode always writes against today — a date query is for normal
+  // marathon logging only, never for the fixed 5K benchmark record.
+  const dateParam = params.get('date')
+  const logDate: IsoDate =
+    !isBenchmark && dateParam && isValidIsoDate(dateParam) ? dateParam : today
+  const planned = plannedWorkoutFor(marathonPlan, logDate)
+  const backTo = FROM_TARGETS[params.get('from') ?? ''] ?? null
+
+  const task = scheduleForDate(plan, parseLocalISODate(logDate))
   const presetExercise = params.get('exercise') ?? ''
   const presetTab: Tab = isBenchmark || params.get('type') === 'run' ? 'run' : 'strength'
   const [tab, setTab] = useState<Tab>(presetTab)
@@ -86,7 +107,9 @@ export function LogScreen() {
 
   // ---- run form ----
   const runLog = useRunLog()
-  const defaultDist = isBenchmark ? 5 : task.type === 'run' ? (task.targetDistanceKm ?? '') : ''
+  const defaultDist = isBenchmark
+    ? 5
+    : (planned?.targetDistanceKm ?? (task.type === 'run' ? (task.targetDistanceKm ?? '') : ''))
   const [distanceKm, setDistanceKm] = useState<number | ''>(defaultDist)
   const [durationMin, setDurationMin] = useState<number | ''>('')
   const [benchmarkTime, setBenchmarkTime] = useState('')
@@ -131,13 +154,14 @@ export function LogScreen() {
       return
     }
     addStrengthEntry({
-      date: today,
+      date: logDate,
       exerciseName: exercise,
       sets: [{ weightKg: Number(weightKg), reps, rpe }],
       progressionNote: note || undefined,
     })
     push(`Logged ${exercise} · ${weightKg}kg × ${reps}`, 'success')
     setNote('')
+    if (backTo) navigate(backTo)
   }
 
   /** Heart rate is optional in both modes, but must be plausible when given. */
@@ -171,7 +195,7 @@ export function LogScreen() {
 
     const dur = durationMin === '' ? undefined : Number(durationMin)
     addRunEntry({
-      date: today,
+      date: logDate,
       distanceKm: Number(distanceKm),
       durationMin: dur,
       averagePace: paceStr || (dur ? pace(Number(distanceKm), dur) : undefined),
@@ -183,6 +207,7 @@ export function LogScreen() {
     })
     push(`Logged run · ${distanceKm} km`, 'success')
     resetRunForm()
+    if (backTo) navigate(backTo)
   }
 
   /**
@@ -202,7 +227,7 @@ export function LogScreen() {
     if (hasErrors(next)) return reject(next)
 
     const saved = logBenchmarkRun({
-      date: today,
+      date: logDate,
       timeSec: parsed.sec,
       distanceKm: BENCHMARK_DISTANCE_KM,
       averageHeartRate: num(hrAvg),
@@ -231,9 +256,16 @@ export function LogScreen() {
     ...runLog.map((e): Row => ({ kind: 'run', e })),
   ].sort((a, b) => b.e.createdAt.localeCompare(a.e.createdAt))
 
+  const subtitle =
+    logDate !== today
+      ? `Logging for ${formatShortDate(logDate)}`
+      : isBenchmark
+        ? '5K benchmark'
+        : 'Log & history'
+
   return (
     <>
-      <ScreenHeader title="Training Log" subtitle={isBenchmark ? '5K benchmark' : 'Log & history'} />
+      <ScreenHeader title="Training Log" subtitle={subtitle} />
       <div className="space-y-4 px-4 py-4">
         <SegmentedToggle
           options={[
@@ -243,6 +275,24 @@ export function LogScreen() {
           value={tab}
           onChange={setTab}
         />
+
+        {tab === 'run' && planned && (
+          <div className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Planned — {formatShortDate(planned.date)}
+            </p>
+            <p className="mt-1 font-display font-semibold text-text">{planned.title}</p>
+            <p className="mt-0.5 text-text-muted">
+              {[
+                planned.targetDistanceKm != null ? `${planned.targetDistanceKm} km` : null,
+                planned.paceZone ? `${planned.paceZone} zone` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+            <p className="mt-0.5 text-xs text-text-faint">{planned.description}</p>
+          </div>
+        )}
 
         {tab === 'strength' ? (
           <SectionCard title="Log a set" icon={Dumbbell} accent="var(--color-volt)">

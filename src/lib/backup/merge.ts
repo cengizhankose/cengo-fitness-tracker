@@ -8,6 +8,7 @@ import type {
   RunLogEntry,
   StrengthLogEntry,
 } from '@/types/userData'
+import type { MarathonStatusRecord } from '@/types/marathon'
 
 export type ImportMode = 'merge' | 'replace'
 
@@ -84,6 +85,14 @@ function mergeChecklistRecord(
   if (incoming.updatedAt > local.updatedAt) return incoming
   if (incoming.updatedAt < local.updatedAt) return local
   return trueCount(incoming) > trueCount(local) ? incoming : local
+}
+
+/** Record-level newest-`updatedAt`-wins, tie -> local. Mirrors `mergeChecklistRecord`. */
+function mergeMarathonRecord(
+  local: MarathonStatusRecord,
+  incoming: MarathonStatusRecord,
+): MarathonStatusRecord {
+  return incoming.updatedAt > local.updatedAt ? incoming : local
 }
 
 const CHECKIN_OPTIONAL_FIELDS = [
@@ -189,6 +198,7 @@ function recordEntries(state: PersistedState): Array<[string, unknown]> {
   for (const e of state.runLog) out.push([`run:${e.id}`, e])
   if (state.benchmark) out.push(['benchmark', state.benchmark])
   if (state.activeSession) out.push(['activeSession', state.activeSession])
+  for (const [k, v] of Object.entries(state.marathonStatus)) out.push([`marathon:${k}`, v])
   return out
 }
 
@@ -290,6 +300,7 @@ export function mergeState(
   let runLog: RunLogEntry[]
   let benchmark: BenchmarkResult | undefined
   let benchmarkOutcome: MergeReport['benchmark']
+  let marathonStatus: Record<IsoDate, MarathonStatusRecord>
 
   if (opts.mode === 'replace') {
     checklist = { ...incoming.checklist }
@@ -298,6 +309,7 @@ export function mergeState(
     runLog = [...incoming.runLog]
     benchmark = incoming.benchmark
     benchmarkOutcome = incoming.benchmark ? 'took-incoming' : 'none'
+    marathonStatus = { ...incoming.marathonStatus }
     for (const date of Object.keys(checkIns)) {
       photoSources.set(date, { front: 'incoming', side: 'incoming' })
     }
@@ -329,6 +341,12 @@ export function mergeState(
     const b = mergeBenchmark(local.benchmark, incoming.benchmark)
     benchmark = b.value
     benchmarkOutcome = b.outcome
+
+    marathonStatus = { ...local.marathonStatus }
+    for (const [date, rec] of Object.entries(incoming.marathonStatus)) {
+      const existing = marathonStatus[date]
+      marathonStatus[date] = existing ? mergeMarathonRecord(existing, rec) : rec
+    }
   }
 
   const resolved = resolvePhotos(checkIns, photoSources, opts)
@@ -344,6 +362,7 @@ export function mergeState(
     runLog,
     benchmark,
     activeSession,
+    marathonStatus,
     _schemaVersion: local._schemaVersion,
   }
 

@@ -10,6 +10,7 @@ export const EMPTY_STATE: PersistedState = {
   strengthLog: [],
   runLog: [],
   benchmark: undefined,
+  marathonStatus: {},
   _schemaVersion: SCHEMA_VERSION,
 }
 
@@ -91,6 +92,14 @@ export function populatedState(): PersistedState {
       timeSec: 1380,
       averagePace: '4:36/km',
       createdAt: '2026-08-02T09:00:00.000Z',
+    },
+    marathonStatus: {
+      '2026-09-02': {
+        date: '2026-09-02',
+        status: 'completed',
+        notes: 'threshold felt strong',
+        updatedAt: '2026-09-02T19:00:00.000Z',
+      },
     },
   })
 }

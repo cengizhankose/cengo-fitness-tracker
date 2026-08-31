@@ -16,6 +16,8 @@ import {
 } from '@/lib/derive'
 import type { DayName, StrengthDay } from '@/types/plan'
 import type { IsoDate } from '@/types/userData'
+import { marathonPlan } from '@/lib/marathon/plan'
+import { marathonSummary, plannedWorkoutFor, resolveActual } from '@/lib/marathon/derive'
 
 // Raw slice hooks (stable references — safe to derive outside the selector).
 export const useSettings = () => useStore((s) => s.settings)
@@ -83,4 +85,23 @@ export function useSessionProgress(day: StrengthDay, sessionId: string) {
 export function useSessionSets(sessionId: string, exerciseName: string) {
   const strengthLog = useStore((s) => s.strengthLog)
   return sessionSets(strengthLog, sessionId, exerciseName)
+}
+
+// ---- Marathon plan ----
+
+export const useMarathonStatus = () => useStore((s) => s.marathonStatus)
+
+export function useMarathonSummary(today: IsoDate = toLocalISODate()) {
+  const runLog = useStore((s) => s.runLog)
+  const statusMap = useStore((s) => s.marathonStatus)
+  return marathonSummary(marathonPlan, runLog, statusMap, today)
+}
+
+/** Planned workout + resolved actual for one date — the pair MarathonDayRow needs. */
+export function useMarathonWorkout(date: IsoDate) {
+  const runLog = useStore((s) => s.runLog)
+  const statusMap = useStore((s) => s.marathonStatus)
+  const workout = plannedWorkoutFor(marathonPlan, date)
+  const actual = workout ? resolveActual(workout, runLog, statusMap) : undefined
+  return { workout, actual }
 }
