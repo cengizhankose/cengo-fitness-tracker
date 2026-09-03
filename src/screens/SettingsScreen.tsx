@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SectionCard } from '@/components/SectionCard'
+import { SyncStatusBadge } from '@/components/SyncStatusBadge'
 import { buildBackup, saveBackup } from '@/lib/backup/export'
 import { IMPORT_RESULT_KEY, formatBytes } from '@/lib/backup/format'
 import type { DecodedBackup, ImportError } from '@/lib/backup/format'
@@ -224,7 +225,7 @@ export function SettingsScreen() {
 
   return (
     <>
-      <ScreenHeader title="Settings" subtitle="Data & backup" />
+      <ScreenHeader title="Settings" subtitle="Data & backup" action={<SyncStatusBadge />} />
       <div className="space-y-4 px-4 py-4">
         <SectionCard title="Back up" icon={Download} accent="var(--color-volt)">
           <div className="mb-3 flex gap-2 rounded-md border border-active/40 bg-active/10 p-3">
