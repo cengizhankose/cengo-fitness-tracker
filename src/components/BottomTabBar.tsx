@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Flame, CalendarDays, TrendingUp, ClipboardList } from 'lucide-react'
+import { Flame, CalendarDays, TrendingUp, ClipboardList, Activity } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface Tab {
@@ -13,6 +13,7 @@ const TABS: Tab[] = [
   { to: '/weekly', label: 'Plan', icon: CalendarDays },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/log', label: 'Log', icon: ClipboardList },
+  { to: '/activities', label: 'Activities', icon: Activity },
 ]
 
 export function BottomTabBar() {

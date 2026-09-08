@@ -2,6 +2,7 @@ import { useStore } from '@/store'
 import { createSyncClient } from './client'
 import { pullAll } from './pull'
 import { startOutbox } from './outbox'
+import { createActivitiesClient, pullActivities } from './activities'
 import type { OutboxHandle } from './outbox'
 
 export { useSyncStatusStore } from './status'
@@ -22,6 +23,9 @@ export function initConvexSync(): void {
   if (!client) return
 
   void pullAll(client)
+  // Activities are pull-only and never enter the checklist/checkIns/.../benchmark merge
+  // system, so they get their own independent client/pull path — see convex-sync/activities.ts.
+  void pullActivities(createActivitiesClient())
   handle = startOutbox(client, () => useStore.getState(), useStore.subscribe)
 }
 

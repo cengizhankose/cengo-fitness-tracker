@@ -1,6 +1,17 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { checklistItems, dayName, marathonStatus, strengthSet } from './validators'
+import {
+  checklistItems,
+  dayName,
+  marathonStatus,
+  strengthSet,
+  activityType,
+  sportGroup,
+  planAdherence,
+  hrZoneEntry,
+  activitySplit,
+  strokeSummaryEntry,
+} from './validators'
 
 /**
  * Every synced table stores its app-side natural key (a date or a StrengthLogEntry/RunLogEntry
@@ -85,6 +96,42 @@ export default defineSchema({
     notes: v.optional(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(), // effective: always createdAt
+  })
+    .index('by_key', ['key'])
+    .index('by_updatedAt', ['updatedAt']),
+
+  /** Garmin activities (run/bike/swim/strength), pushed by the garmin-logan Python scripts.
+   *  Read-only from this app's perspective — `comment`/`planAdherence`/`planRef` are filled
+   *  in later by the Hermes cron job's LLM pass, never by this client. */
+  activities: defineTable({
+    key: v.string(), // == id
+    id: v.string(), // "garmin-<garminId>"
+    garminId: v.number(),
+    type: activityType,
+    sportGroup: sportGroup,
+    name: v.string(),
+    date: v.string(),
+    startTimeLocal: v.string(),
+    durationMin: v.number(),
+    movingDurationMin: v.optional(v.number()),
+    distanceKm: v.optional(v.number()),
+    avgHr: v.optional(v.number()),
+    maxHr: v.optional(v.number()),
+    calories: v.optional(v.number()),
+    aerobicTE: v.optional(v.number()),
+    anaerobicTE: v.optional(v.number()),
+    trainingLoad: v.optional(v.number()),
+    hrZones: v.optional(v.array(hrZoneEntry)),
+    splits: v.optional(v.array(activitySplit)),
+    strokeSummary: v.optional(v.array(strokeSummaryEntry)),
+    avgCadence: v.optional(v.number()),
+    rawNotes: v.optional(v.string()),
+    comment: v.optional(v.string()),
+    commentGeneratedAt: v.optional(v.string()),
+    planAdherence: v.optional(planAdherence),
+    planRef: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
   })
     .index('by_key', ['key'])
     .index('by_updatedAt', ['updatedAt']),

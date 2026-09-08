@@ -9,6 +9,7 @@ import type {
   BenchmarkResult,
   IsoTimestamp,
 } from '@/types/userData'
+import type { Activity } from '@/types/activities'
 import type { CheckInWire, RunWire, BenchmarkWire } from './types'
 
 /** `updatedAt` when present, else `createdAt`. Strength-log entries only ever get an
@@ -68,4 +69,48 @@ export function benchmarkFromWire(w: BenchmarkWire): BenchmarkResult {
     notes: w.notes,
     createdAt: w.createdAt,
   }
+}
+
+/** Every Activity field that is optional on the wire. Kept as a literal list (rather than
+ *  reused elsewhere) so this is the one place that has to change if the shape grows. */
+const ACTIVITY_OPTIONAL_KEYS = [
+  'movingDurationMin',
+  'distanceKm',
+  'avgHr',
+  'maxHr',
+  'calories',
+  'aerobicTE',
+  'anaerobicTE',
+  'trainingLoad',
+  'hrZones',
+  'splits',
+  'strokeSummary',
+  'avgCadence',
+  'rawNotes',
+  'comment',
+  'commentGeneratedAt',
+  'planAdherence',
+  'planRef',
+] as const
+
+/**
+ * Activities are pull-only: garmin-logan's push_to_convex.py writes them straight into Convex,
+ * this app never edits or pushes one back. Its Python side serializes an unset field as JSON
+ * `null` rather than omitting the key, which Convex's own client never produces — so unlike
+ * the other adapters here, this one has to defend against `null` on every optional field
+ * (top-level, and each split's optional `hr`), collapsing it to `undefined` so the rest of the
+ * app only ever sees the TS-native "absent" shape.
+ */
+export function activityFromWire(wire: Record<string, unknown>): Activity {
+  const out: Record<string, unknown> = { ...wire }
+  for (const key of ACTIVITY_OPTIONAL_KEYS) {
+    if (out[key] === null) delete out[key]
+  }
+  if (Array.isArray(out.splits)) {
+    out.splits = (out.splits as Record<string, unknown>[]).map((split) => {
+      const { hr, ...rest } = split
+      return hr === null ? rest : split
+    })
+  }
+  return out as unknown as Activity
 }
