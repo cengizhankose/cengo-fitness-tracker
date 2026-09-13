@@ -59,6 +59,7 @@ export const BENCHMARK_SINGLETON_KEY = 'singleton'
 export const activityType = v.union(
   v.literal('running'),
   v.literal('treadmill_running'),
+  v.literal('track_running'),
   v.literal('open_water_swimming'),
   v.literal('lap_swimming'),
   v.literal('cycling'),

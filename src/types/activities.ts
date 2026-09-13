@@ -5,6 +5,7 @@ import type { IsoDate, IsoTimestamp } from './userData'
 export type ActivityType =
   | 'running'
   | 'treadmill_running'
+  | 'track_running'
   | 'open_water_swimming'
   | 'lap_swimming'
   | 'cycling'
