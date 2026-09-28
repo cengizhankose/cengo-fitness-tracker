@@ -24,12 +24,12 @@ const NO_STATUS: Record<string, MarathonStatusRecord> = {}
 function run(overrides: Partial<RunLogEntry> = {}): RunLogEntry {
   return {
     id: overrides.id ?? 'r1',
-    date: overrides.date ?? '2026-09-02',
+    date: overrides.date ?? '2026-09-01',
     distanceKm: overrides.distanceKm ?? 8,
     durationMin: overrides.durationMin,
     averagePace: overrides.averagePace,
     notes: overrides.notes,
-    createdAt: overrides.createdAt ?? '2026-09-02T18:00:00.000Z',
+    createdAt: overrides.createdAt ?? '2026-09-01T18:00:00.000Z',
     ...overrides,
   }
 }
@@ -55,7 +55,8 @@ describe('weekForDate', () => {
 
 describe('plannedWorkoutFor', () => {
   it('finds the planned workout for a date inside the plan', () => {
-    expect(plannedWorkoutFor(marathonPlan, '2026-09-02')?.workoutType).toBe('THRESHOLD')
+    // finish mode W1: Tue EASY (2026-09-01)
+    expect(plannedWorkoutFor(marathonPlan, '2026-09-01')?.workoutType).toBe('EASY')
     expect(plannedWorkoutFor(marathonPlan, '2026-08-30')).toBeUndefined()
   })
 })
@@ -83,10 +84,10 @@ describe('planPhase / defaultOpenWeek', () => {
 })
 
 describe('peakLongRun / sundayLongRunFor', () => {
-  it('finds the 30km peak long run on 2026-10-18', () => {
+  it('finds the 16km peak long run (first of the two 16s)', () => {
     const peak = peakLongRun(marathonPlan)
-    expect(peak.targetDistanceKm).toBe(30)
-    expect(peak.date).toBe('2026-10-18')
+    expect(peak.targetDistanceKm).toBe(16)
+    expect(peak.date).toBe('2026-09-27')
   })
 
   it('resolves the Sunday of the containing week, including race day', () => {
@@ -106,7 +107,7 @@ describe('nutritionPhaseFor', () => {
 })
 
 describe('resolveActual — run day', () => {
-  const workout = plannedWorkoutFor(marathonPlan, '2026-09-02')!
+  const workout = plannedWorkoutFor(marathonPlan, '2026-09-01')!
 
   it('no data -> pending, all-null, not an override', () => {
     const actual = resolveActual(workout, NO_RUNS, NO_STATUS)
@@ -146,13 +147,13 @@ describe('resolveActual — run day', () => {
 
   it('explicit skipped beats a logged run', () => {
     const runs = [run({ distanceKm: 8, durationMin: 40 })]
-    const actual = resolveActual(workout, runs, status('2026-09-02', 'skipped'))
+    const actual = resolveActual(workout, runs, status('2026-09-01', 'skipped'))
     expect(actual.status).toBe('skipped')
     expect(actual.isOverride).toBe(true)
   })
 
   it('explicit completed with no run -> completed, distance null', () => {
-    const actual = resolveActual(workout, NO_RUNS, status('2026-09-02', 'completed'))
+    const actual = resolveActual(workout, NO_RUNS, status('2026-09-01', 'completed'))
     expect(actual.status).toBe('completed')
     expect(actual.actualDistanceKm).toBeNull()
     expect(actual.isOverride).toBe(true)
@@ -160,7 +161,7 @@ describe('resolveActual — run day', () => {
 
   it('override notes beat run notes', () => {
     const runs = [run({ distanceKm: 8, durationMin: 40, notes: 'run notes' })]
-    const actual = resolveActual(workout, runs, status('2026-09-02', 'completed', 'override notes'))
+    const actual = resolveActual(workout, runs, status('2026-09-01', 'completed', 'override notes'))
     expect(actual.notes).toBe('override notes')
   })
 })
@@ -190,19 +191,19 @@ describe('resolveActual — REST day', () => {
 describe('weekTotals', () => {
   const week1 = marathonPlan.weeks[0]!
 
-  it('planned 39km with no data logged', () => {
+  it('planned 17km with no data logged', () => {
     const totals = weekTotals(week1, NO_RUNS, NO_STATUS)
-    expect(totals.plannedKm).toBe(39)
+    expect(totals.plannedKm).toBe(17)
     expect(totals.completedKm).toBe(0)
-    expect(totals.sessionsPlanned).toBe(5)
-    expect(totals.restPlanned).toBe(2)
+    expect(totals.sessionsPlanned).toBe(4)
+    expect(totals.restPlanned).toBe(3)
   })
 
-  it('a logged 16km long run -> completed 16, ~41%', () => {
-    const runs = [run({ date: '2026-09-06', distanceKm: 16, durationMin: 96 })]
+  it('a logged 10km long run -> completed 10, ~59%', () => {
+    const runs = [run({ date: '2026-09-06', distanceKm: 10, durationMin: 96 })]
     const totals = weekTotals(week1, runs, NO_STATUS)
-    expect(totals.completedKm).toBe(16)
-    expect(totals.completionPercent).toBe(41)
+    expect(totals.completedKm).toBe(10)
+    expect(totals.completionPercent).toBe(59)
   })
 
   it('a skipped run contributes 0 km even though logged', () => {
@@ -229,9 +230,9 @@ describe('weekTotals', () => {
 })
 
 describe('planTotals', () => {
-  it('planned 433.2km total, 0% with no logs', () => {
+  it('planned finish-mode total 215.2km, 0% with no logs', () => {
     const totals = planTotals(marathonPlan, NO_RUNS, NO_STATUS)
-    expect(totals.plannedKm).toBe(433.2)
+    expect(totals.plannedKm).toBe(215.7)
     expect(totals.completionPercent).toBe(0)
   })
 })
@@ -248,7 +249,7 @@ describe('nextWorkout', () => {
   it('steps over completed and skipped days', () => {
     const statusMap = {
       ...status('2026-09-01', 'completed'),
-      ...status('2026-09-02', 'skipped'),
+      ...status('2026-09-01', 'skipped'),
     }
     expect(nextWorkout(marathonPlan, NO_RUNS, statusMap, '2026-08-29')?.date).toBe('2026-09-03')
   })

@@ -11,7 +11,7 @@ import { ToastHost } from '@/components/ToastHost'
 import { checkA11y } from '@/test/axe'
 import type { RunLogEntry } from '@/types/userData'
 
-const runWorkout = marathonPlan.weeks[0]!.days[2]! // Wed 2 Sep 2026 — Threshold, 8km
+const runWorkout = marathonPlan.weeks[0]!.days[1]! // Tue 1 Sep 2026 — Easy Run (finish mode)
 const restWorkout = marathonPlan.weeks[0]!.days[0]! // Mon 31 Aug 2026 — REST
 const raceWorkout = marathonPlan.weeks[8]!.days[6]! // Sun 1 Nov 2026 — RACE
 
@@ -78,10 +78,10 @@ beforeEach(() => {
 describe('MarathonDayRow — collapsed', () => {
   it('renders date, title, meta and pending status for a run day', () => {
     renderRow()
-    expect(screen.getByText(/Wed 2 Sep/)).toBeInTheDocument()
-    expect(screen.getAllByText('Threshold').length).toBeGreaterThan(0)
-    expect(screen.getByText(/8 km/)).toBeInTheDocument()
-    expect(screen.getByText(/24 min/)).toBeInTheDocument()
+    expect(screen.getByText(/Tue 1 Sep/)).toBeInTheDocument()
+    expect(screen.getAllByText('Easy Run').length).toBeGreaterThan(0)
+    expect(screen.getByText(/2.5 km/)).toBeInTheDocument()
+    expect(screen.getByText(/25 min/)).toBeInTheDocument()
     expect(screen.getByText('Pending')).toBeInTheDocument()
   })
 
@@ -102,7 +102,7 @@ describe('MarathonDayRow — expanded, run day', () => {
     renderRow({ expanded: true, from: 'plan' })
     await user.click(screen.getByRole('button', { name: /Log run/ }))
     expect(await screen.findByTestId('loc')).toHaveTextContent(
-      '/log?type=run&date=2026-09-02&from=plan',
+      '/log?type=run&date=2026-09-01&from=plan',
     )
   })
 
@@ -110,11 +110,11 @@ describe('MarathonDayRow — expanded, run day', () => {
     const runLog: RunLogEntry[] = [
       {
         id: 'r1',
-        date: '2026-09-02',
+        date: '2026-09-01',
         distanceKm: 8.4,
         durationMin: 41,
         notes: 'legs felt heavy',
-        createdAt: '2026-09-02T18:00:00.000Z',
+        createdAt: '2026-09-01T18:00:00.000Z',
       },
     ]
     renderRow({ expanded: true, runLog })
@@ -127,32 +127,32 @@ describe('MarathonDayRow — expanded, run day', () => {
   it('Skip stores skipped and shows Undo; Undo clears the override', async () => {
     const user = userEvent.setup()
     renderRow({ expanded: true })
-    const row = () => screen.getByTestId('marathon-day-2026-09-02')
+    const row = () => screen.getByTestId('marathon-day-2026-09-01')
 
     await user.click(screen.getByRole('button', { name: /^Skip/ }))
-    expect(useStore.getState().marathonStatus['2026-09-02']?.status).toBe('skipped')
+    expect(useStore.getState().marathonStatus['2026-09-01']?.status).toBe('skipped')
     await screen.findByRole('button', { name: /^Undo/ })
     expect(row()).toHaveTextContent('Skipped')
 
     await user.click(screen.getByRole('button', { name: /^Undo/ }))
-    expect(useStore.getState().marathonStatus['2026-09-02']).toBeUndefined()
+    expect(useStore.getState().marathonStatus['2026-09-01']).toBeUndefined()
     expect(row()).toHaveTextContent('Pending')
   })
 
   it('Undo after a completed override with a run intact falls back to Done', async () => {
     const user = userEvent.setup()
     const runLog: RunLogEntry[] = [
-      { id: 'r1', date: '2026-09-02', distanceKm: 8, durationMin: 40, createdAt: '2026-09-02T18:00:00.000Z' },
+      { id: 'r1', date: '2026-09-01', distanceKm: 8, durationMin: 40, createdAt: '2026-09-01T18:00:00.000Z' },
     ]
     useStore.setState({
       marathonStatus: {
-        '2026-09-02': { date: '2026-09-02', status: 'skipped', updatedAt: '2026-09-02T19:00:00.000Z' },
+        '2026-09-01': { date: '2026-09-01', status: 'skipped', updatedAt: '2026-09-01T19:00:00.000Z' },
       },
     })
     renderRow({ expanded: true, runLog, actual: resolveActual(runWorkout, runLog, useStore.getState().marathonStatus) })
 
     await user.click(screen.getByRole('button', { name: /^Undo/ }))
-    expect(useStore.getState().marathonStatus['2026-09-02']).toBeUndefined()
+    expect(useStore.getState().marathonStatus['2026-09-01']).toBeUndefined()
   })
 })
 
@@ -200,8 +200,8 @@ describe('MarathonDayRow — race day and date treatment', () => {
   })
 
   it("today's row carries the today border", () => {
-    renderRow({ today: '2026-09-02' })
-    expect(screen.getByTestId('marathon-day-2026-09-02')).toHaveClass('border-volt/60')
+    renderRow({ today: '2026-09-01' })
+    expect(screen.getByTestId('marathon-day-2026-09-01')).toHaveClass('border-volt/60')
   })
 
   it('a past pending day renders the missed tint but still reads Pending', () => {
@@ -218,16 +218,16 @@ describe('MarathonDayRow — accessibility', () => {
     renderRow({ expanded: false, onToggle })
     const trigger = screen.getByRole('button', { expanded: false })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    expect(trigger.getAttribute('aria-label')).toMatch(/Wed 2 Sep/)
+    expect(trigger.getAttribute('aria-label')).toMatch(/Tue 1 Sep/)
 
     renderRow({ expanded: true })
-    expect(screen.getByRole('button', { name: /Skip Wed 2 Sep/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Skip Tue 1 Sep/ })).toBeInTheDocument()
     await user.tab()
   })
 
   it('is axe clean expanded with a run logged', async () => {
     const runLog: RunLogEntry[] = [
-      { id: 'r1', date: '2026-09-02', distanceKm: 8, durationMin: 40, createdAt: '2026-09-02T18:00:00.000Z' },
+      { id: 'r1', date: '2026-09-01', distanceKm: 8, durationMin: 40, createdAt: '2026-09-01T18:00:00.000Z' },
     ]
     const { container } = renderRow({ expanded: true, runLog })
     expect(await checkA11y(container)).toHaveNoViolations()

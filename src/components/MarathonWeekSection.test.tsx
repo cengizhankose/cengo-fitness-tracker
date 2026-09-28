@@ -38,8 +38,8 @@ describe('MarathonWeekSection — collapsed', () => {
     expect(trigger).toHaveTextContent('31 Aug')
     expect(trigger).toHaveTextContent('6 Sep')
     expect(trigger).toHaveTextContent('Base re-entry')
-    expect(trigger).toHaveTextContent('39')
-    expect(trigger).toHaveTextContent('0/5 sessions')
+    expect(trigger).toHaveTextContent('17')
+    expect(trigger).toHaveTextContent('0/4 sessions')
   })
 
   it('mounts no day rows while collapsed', () => {

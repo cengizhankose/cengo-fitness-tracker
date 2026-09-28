@@ -28,14 +28,14 @@ beforeEach(() => {
 describe('MarathonTodayCard', () => {
   it('renders a Marathon card with today pre-expanded, CTA carries from=today', async () => {
     const user = userEvent.setup()
-    renderCard('2026-09-02')
+    renderCard('2026-09-01')
 
     expect(screen.getByText('Marathon')).toBeInTheDocument()
-    expect(screen.getByText('Threshold', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('Easy Run', { selector: 'p' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Log run/ }))
     expect(await screen.findByTestId('loc')).toHaveTextContent(
-      '/log?type=run&date=2026-09-02&from=today',
+      '/log?type=run&date=2026-09-01&from=today',
     )
   })
 

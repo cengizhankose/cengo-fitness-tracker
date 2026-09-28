@@ -82,7 +82,7 @@ describe('MarathonTracker — post-race (2026-11-02)', () => {
     expect(screen.getByText(/0 days/)).toBeInTheDocument()
     expect(screen.getByText(/Race complete/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Week 9/ })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(/433\.2 km/)).toBeInTheDocument()
+    expect(screen.getByText(/215\.7 km/)).toBeInTheDocument()
   })
 })
 

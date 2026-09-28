@@ -229,13 +229,13 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('a marathon date param prefills distance, saves the entry against that date, and names the date in the subtitle', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&date=2026-09-02')
+    renderLog('/log?type=run&date=2026-09-01')
 
-    expect(screen.getByLabelText(/^Distance/)).toHaveValue(8)
-    expect(screen.getByText(/Logging for/)).toHaveTextContent('Wed 2 Sep')
+    expect(screen.getByLabelText(/^Distance/)).toHaveValue(2.5)
+    expect(screen.getByText(/Logging for/)).toHaveTextContent('Tue 1 Sep')
 
     await user.click(screen.getByRole('button', { name: /Save run/ }))
-    expect(state().runLog[0]?.date).toBe('2026-09-02')
+    expect(state().runLog[0]?.date).toBe('2026-09-01')
   })
 
   it('shows a read-only planned-workout banner with no extra inputs', () => {
@@ -243,15 +243,15 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
     const baseInputCount = noParam.container.querySelectorAll('input').length
     noParam.unmount()
 
-    const withParam = renderLog('/log?type=run&date=2026-09-02')
-    expect(screen.getByText('Threshold')).toBeInTheDocument()
-    expect(screen.getByText(/8 km/)).toBeInTheDocument()
-    expect(screen.getByText(/Threshold zone/)).toBeInTheDocument()
+    const withParam = renderLog('/log?type=run&date=2026-09-01')
+    expect(screen.getByText('Easy Run')).toBeInTheDocument()
+    expect(screen.getByText(/2.5 km/)).toBeInTheDocument()
+    expect(screen.getByText(/Easy zone/)).toBeInTheDocument()
     expect(withParam.container.querySelectorAll('input').length).toBe(baseInputCount)
   })
 
   it('does not prefill duration or pace from the plan', () => {
-    renderLog('/log?type=run&date=2026-09-02')
+    renderLog('/log?type=run&date=2026-09-01')
     expect(screen.getByLabelText(/^Duration/)).toHaveValue(null)
     expect(screen.getByPlaceholderText(/auto from distance/)).toHaveValue('')
   })
@@ -279,7 +279,7 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('from=plan returns to /weekly after a successful save', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&date=2026-09-02&from=plan')
+    renderLog('/log?type=run&date=2026-09-01&from=plan')
 
     await user.type(screen.getByLabelText(/^Distance/), '8')
     await user.click(screen.getByRole('button', { name: /Save run/ }))
@@ -289,7 +289,7 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('from=today returns to / after a successful save', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&date=2026-09-02&from=today')
+    renderLog('/log?type=run&date=2026-09-01&from=today')
 
     await user.type(screen.getByLabelText(/^Distance/), '8')
     await user.click(screen.getByRole('button', { name: /Save run/ }))
@@ -299,7 +299,7 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('an unknown from stays put', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&date=2026-09-02&from=nowhere')
+    renderLog('/log?type=run&date=2026-09-01&from=nowhere')
 
     await user.type(screen.getByLabelText(/^Distance/), '8')
     await user.click(screen.getByRole('button', { name: /Save run/ }))
@@ -310,7 +310,7 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('?benchmark=1 is unaffected: fixes 5km and navigates to / regardless of from', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&benchmark=1&date=2026-09-02')
+    renderLog('/log?type=run&benchmark=1&date=2026-09-01')
 
     await user.type(screen.getByLabelText(/^Time/), '24:30')
     await user.click(screen.getByRole('button', { name: /Save benchmark/ }))
@@ -321,7 +321,7 @@ describe('LogScreen — marathon date + context (Slice 6)', () => {
 
   it('benchmark mode ignores a supplied date query param and always logs against today', async () => {
     const user = userEvent.setup()
-    renderLog('/log?type=run&benchmark=1&date=2026-09-02')
+    renderLog('/log?type=run&benchmark=1&date=2026-09-01')
 
     await user.type(screen.getByLabelText(/^Time/), '24:30')
     await user.click(screen.getByRole('button', { name: /Save benchmark/ }))
