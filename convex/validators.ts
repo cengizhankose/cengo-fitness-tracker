@@ -65,6 +65,9 @@ export const activityType = v.union(
   v.literal('cycling'),
   v.literal('strength_training'),
   v.literal('meditation'),
+  v.literal('breathwork'),
+  v.literal('walking'),
+  v.literal('hiking'),
   v.literal('other'),
 )
 

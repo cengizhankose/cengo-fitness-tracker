@@ -11,6 +11,9 @@ export type ActivityType =
   | 'cycling'
   | 'strength_training'
   | 'meditation'
+  | 'breathwork'
+  | 'walking'
+  | 'hiking'
   | 'other'
 
 /** Coarse grouping over ActivityType, used for the Activities screen's filter chips. */
