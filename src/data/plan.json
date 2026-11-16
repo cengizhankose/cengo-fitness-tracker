@@ -1,517 +1,622 @@
 {
-  "meta": {
-    "planName": "Cengo Cut + Marathon Hybrid Plan",
-    "version": "1.0",
-    "primaryGoals": [
-      "92kg -> 82-84kg",
-      "22% body fat -> 10-12%",
-      "Prepare for Istanbul Marathon on Nov 1",
-      "Maintain muscle mass and strength",
-      "Improve running consistency without injury"
-    ],
-    "profileAssumptions": {
-      "heightCm": 183,
-      "startWeightKg": 92,
-      "estimatedBodyFatPercent": 22,
-      "trainingStyle": "Mike Mentzer inspired low-volume high-intensity hybrid",
-      "dietStyle": "2 meals, sustainable meal prep, high protein"
-    }
-  },
-  "nutrition": {
-    "dailyTargets": {
-      "caloriesKcal": {
-        "min": 2200,
-        "max": 2300
-      },
-      "proteinG": {
-        "min": 200,
-        "max": 220
-      },
-      "carbsG": {
-        "min": 150,
-        "max": 180
-      },
-      "fatG": {
-        "min": 50,
-        "max": 60
-      },
-      "steps": {
-        "min": 10000
-      },
-      "sleepHours": {
-        "min": 7.5,
-        "max": 8.5
-      }
+  "name": "Cengo Cut",
+  "version": "2.0",
+  "startDate": "2026-11-16",
+  "goal": {
+    "startKg": 95.5,
+    "milestoneKg": {
+      "min": 89,
+      "max": 90
     },
-    "meals": [
-      {
-        "id": "meal_1",
-        "name": "Chicken Potato Bowl",
-        "time": "12:00",
-        "items": [
-          {
-            "name": "Chicken breast",
-            "amount": 300,
-            "unit": "g"
-          },
-          {
-            "name": "Boiled potato",
-            "amount": 250,
-            "unit": "g"
-          },
-          {
-            "name": "Mixed vegetables",
-            "amount": 300,
-            "unit": "g"
-          },
-          {
-            "name": "Olive oil",
-            "amount": 10,
-            "unit": "g"
-          }
-        ],
-        "estimatedCaloriesKcal": 700
-      },
-      {
-        "id": "meal_2",
-        "name": "Lean Beef Rice Bowl",
-        "time": "19:00",
-        "items": [
-          {
-            "name": "Lean beef",
-            "amount": 300,
-            "unit": "g"
-          },
-          {
-            "name": "Rice",
-            "amount": 250,
-            "unit": "g"
-          },
-          {
-            "name": "Large salad",
-            "amount": 1,
-            "unit": "portion"
-          },
-          {
-            "name": "Olive oil",
-            "amount": 10,
-            "unit": "g"
-          }
-        ],
-        "estimatedCaloriesKcal": 900
-      },
-      {
-        "id": "post_workout",
-        "name": "Post Workout Shake",
-        "time": "after_training",
-        "items": [
-          {
-            "name": "Whey protein",
-            "amount": 2,
-            "unit": "scoop"
-          },
-          {
-            "name": "Banana",
-            "amount": 1,
-            "unit": "piece"
-          }
-        ],
-        "estimatedCaloriesKcal": 320
-      }
-    ],
-    "rules": [
-      "No alcohol during cut",
-      "Avoid unnecessary cheat meals",
-      "Meal prep first, eating out only if macros can be matched"
-    ]
+    "milestoneDate": "2027-02-08",
+    "kgPerWeek": 0.5
   },
-  "weeklySchedule": [
+  "weeklyTemplate": [
     {
       "day": "Monday",
-      "type": "strength",
-      "title": "Upper A",
-      "durationMin": 40,
-      "exercises": [
+      "blocks": [
         {
-          "name": "Incline Dumbbell Press",
-          "warmupSets": 2,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Pull Up / Lat Pulldown",
-          "warmupSets": 2,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Machine Chest Press",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Seated Cable Row",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Lateral Raise",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "12-20",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Cable Curl",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Rope Pushdown",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        }
-      ],
-      "postWorkoutStretchingId": "strength_stretch_5min"
-    },
-    {
-      "day": "Tuesday",
-      "type": "run",
-      "title": "Zone 2 Run",
-      "durationMin": 45,
-      "targetDistanceKm": 6,
-      "intensity": "Easy conversational pace",
-      "postWorkoutStretchingId": "run_stretch_5min"
-    },
-    {
-      "day": "Wednesday",
-      "type": "strength",
-      "title": "Lower Marathon-Friendly",
-      "durationMin": 35,
-      "exercises": [
-        {
-          "name": "Leg Press",
-          "warmupSets": 3,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9"
-        },
-        {
-          "name": "Romanian Deadlift",
-          "warmupSets": 2,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9"
-        },
-        {
-          "name": "Leg Curl",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "10-15",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Standing Calf Raise",
-          "warmupSets": 0,
-          "workingSets": 2,
-          "repRange": "10-15",
-          "intensity": "RPE 9"
-        },
-        {
-          "name": "Hanging Leg Raise",
-          "warmupSets": 0,
-          "workingSets": 3,
-          "repRange": "controlled",
-          "intensity": "clean reps"
-        }
-      ],
-      "postWorkoutStretchingId": "strength_stretch_5min"
-    },
-    {
-      "day": "Thursday",
-      "type": "run",
-      "title": "Tempo Run",
-      "durationMin": null,
-      "structure": [
-        {
-          "segment": "easy",
-          "distanceKm": 1
-        },
-        {
-          "segment": "tempo",
-          "distanceKm": 4,
-          "pace": "5:50-6:10/km"
-        },
-        {
-          "segment": "easy",
-          "distanceKm": 1
-        }
-      ],
-      "targetDistanceKm": 6,
-      "postWorkoutStretchingId": "run_stretch_5min"
-    },
-    {
-      "day": "Friday",
-      "type": "football",
-      "title": "Halisaha",
-      "durationMin": 60,
-      "rule": "No extra training"
-    },
-    {
-      "day": "Saturday",
-      "type": "strength",
-      "title": "Upper B",
-      "durationMin": 40,
-      "exercises": [
-        {
-          "name": "Weighted Dip / Chest Press",
-          "warmupSets": 1,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Weighted Chin Up",
-          "warmupSets": 1,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Shoulder Press",
-          "warmupSets": 1,
-          "workingSets": 1,
-          "repRange": "6-10",
-          "intensity": "RPE 9"
-        },
-        {
-          "name": "Row Variation",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Lateral Raise",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "12-20",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Hammer Curl",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        },
-        {
-          "name": "Overhead Triceps Extension",
-          "warmupSets": 0,
-          "workingSets": 1,
-          "repRange": "8-12",
-          "intensity": "RPE 9-10"
-        }
-      ],
-      "postWorkoutStretchingId": "strength_stretch_5min"
-    },
-    {
-      "day": "Sunday",
-      "type": "run",
-      "title": "Long Run",
-      "intensity": "Zone 2",
-      "progressionKmByWeek": [
-        8,
-        10,
-        12,
-        14,
-        16,
-        18,
-        20,
-        22,
-        24,
-        26,
-        28,
-        30
-      ],
-      "postWorkoutStretchingId": "run_stretch_5min"
-    }
-  ],
-  "mobility": {
-    "dailyMorningMobility": {
-      "id": "morning_mobility_5min",
-      "durationMin": 5,
-      "items": [
-        {
-          "name": "Cat-Cow",
-          "durationSec": 60
-        },
-        {
-          "name": "World's Greatest Stretch",
-          "durationSec": 60
-        },
-        {
-          "name": "Deep Squat Hold",
-          "durationSec": 60
-        },
-        {
-          "name": "Hip Openers",
-          "durationSec": 60
-        },
-        {
-          "name": "Shoulder Circles",
-          "durationSec": 60
+          "type": "strength",
+          "sessionId": "pull"
         }
       ]
     },
-    "stretchingRoutines": [
-      {
-        "id": "strength_stretch_5min",
-        "name": "Strength Training Cooldown",
-        "durationMin": 5,
-        "items": [
-          {
-            "name": "Couch Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Hamstring Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Figure 4 Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Child Pose",
-            "durationSec": 30,
-            "eachSide": false
-          },
-          {
-            "name": "Lat Stretch",
-            "durationSec": 30,
-            "eachSide": true
+    {
+      "day": "Tuesday",
+      "blocks": [
+        {
+          "type": "strength",
+          "sessionId": "push"
+        }
+      ]
+    },
+    {
+      "day": "Wednesday",
+      "blocks": [
+        {
+          "type": "strength",
+          "sessionId": "legs"
+        }
+      ]
+    },
+    {
+      "day": "Thursday",
+      "blocks": [
+        {
+          "type": "strength",
+          "sessionId": "upper-superset"
+        },
+        {
+          "type": "run",
+          "title": "Kolay koşu",
+          "durationMin": 20
+        }
+      ]
+    },
+    {
+      "day": "Friday",
+      "blocks": [
+        {
+          "type": "strength",
+          "sessionId": "short"
+        },
+        {
+          "type": "football",
+          "title": "Halısaha",
+          "when": "Akşam"
+        }
+      ]
+    },
+    {
+      "day": "Saturday",
+      "blocks": [
+        {
+          "type": "strength",
+          "sessionId": "upper-superset",
+          "optional": true
+        },
+        {
+          "type": "run",
+          "title": "Kolay koşu",
+          "durationMin": 30,
+          "optional": true
+        }
+      ]
+    },
+    {
+      "day": "Sunday",
+      "blocks": [
+        {
+          "type": "run",
+          "title": "Grup koşusu",
+          "longRun": true
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "pull",
+      "title": "Pull",
+      "durationMin": 45,
+      "items": [
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Deadlift",
+            "sets": 1,
+            "reps": 5,
+            "unit": "kg",
+            "startKg": 120,
+            "stepKg": 5,
+            "region": "back"
           }
-        ]
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Pull Up",
+            "sets": 1,
+            "reps": "max",
+            "unit": "bodyweight",
+            "region": "back"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Seated Cable Row",
+            "sets": 1,
+            "reps": 10,
+            "unit": "kg",
+            "startKg": 50,
+            "stepKg": 2.5,
+            "region": "back"
+          }
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Face Pull",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "shoulders"
+            },
+            {
+              "name": "Cable Curl",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 25,
+              "stepKg": 2.5,
+              "region": "biceps"
+            }
+          ]
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Hanging Leg Raise",
+            "sets": 2,
+            "reps": 12,
+            "unit": "bodyweight",
+            "region": "core"
+          }
+        }
+      ]
+    },
+    {
+      "id": "push",
+      "title": "Push",
+      "durationMin": 45,
+      "items": [
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Bench Press",
+            "sets": 1,
+            "reps": 5,
+            "unit": "kg",
+            "startKg": 80,
+            "stepKg": 2.5,
+            "region": "chest"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Incline Dumbbell Press",
+            "sets": 1,
+            "reps": 8,
+            "unit": "kg",
+            "startKg": 30,
+            "stepKg": 2.5,
+            "region": "chest"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Shoulder Press",
+            "sets": 1,
+            "reps": 8,
+            "unit": "kg",
+            "stepKg": 2.5,
+            "region": "shoulders"
+          }
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Lateral Raise",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 10,
+              "stepKg": 2.5,
+              "region": "shoulders"
+            },
+            {
+              "name": "Rope Pushdown",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 35,
+              "stepKg": 2.5,
+              "region": "triceps"
+            }
+          ]
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Machine Chest Press",
+            "sets": 1,
+            "reps": 12,
+            "unit": "kg",
+            "startKg": 40,
+            "stepKg": 2.5,
+            "region": "chest"
+          }
+        }
+      ]
+    },
+    {
+      "id": "legs",
+      "title": "Bacak",
+      "durationMin": 45,
+      "items": [
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Squat",
+            "sets": 1,
+            "reps": 5,
+            "unit": "kg",
+            "startKg": 100,
+            "stepKg": 5,
+            "region": "legs"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Romanian Deadlift",
+            "sets": 1,
+            "reps": 8,
+            "unit": "kg",
+            "stepKg": 5,
+            "region": "legs"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Leg Press",
+            "sets": 1,
+            "reps": 12,
+            "unit": "kg",
+            "stepKg": 5,
+            "region": "legs"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Leg Curl",
+            "sets": 1,
+            "reps": 12,
+            "unit": "kg",
+            "stepKg": 5,
+            "region": "legs"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Standing Calf Raise",
+            "sets": 2,
+            "reps": 12,
+            "unit": "kg",
+            "stepKg": 5,
+            "region": "legs"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Plank",
+            "sets": 2,
+            "reps": 45,
+            "unit": "seconds",
+            "region": "core"
+          }
+        }
+      ]
+    },
+    {
+      "id": "upper-superset",
+      "title": "Üst vücut superset",
+      "durationMin": 25,
+      "items": [
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Machine Chest Press",
+              "sets": 2,
+              "reps": 12,
+              "unit": "kg",
+              "startKg": 40,
+              "stepKg": 2.5,
+              "region": "chest"
+            },
+            {
+              "name": "Lat Pulldown",
+              "sets": 2,
+              "reps": 10,
+              "unit": "kg",
+              "startKg": 60,
+              "stepKg": 2.5,
+              "region": "back"
+            }
+          ]
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Shoulder Press",
+              "sets": 2,
+              "reps": 12,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "shoulders"
+            },
+            {
+              "name": "Seated Cable Row",
+              "sets": 2,
+              "reps": 10,
+              "unit": "kg",
+              "startKg": 50,
+              "stepKg": 2.5,
+              "region": "back"
+            }
+          ]
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Lateral Raise",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 10,
+              "stepKg": 2.5,
+              "region": "shoulders"
+            },
+            {
+              "name": "Hammer Curl",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "biceps"
+            },
+            {
+              "name": "Overhead Triceps Extension",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "triceps"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "short",
+      "title": "Kısa seans",
+      "durationMin": 30,
+      "items": [
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Pull Up",
+            "sets": 3,
+            "reps": 3,
+            "unit": "bodyweight",
+            "region": "back"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Push Up",
+            "sets": 2,
+            "reps": 15,
+            "unit": "bodyweight",
+            "region": "chest"
+          }
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Face Pull",
+            "sets": 2,
+            "reps": 15,
+            "unit": "kg",
+            "stepKg": 2.5,
+            "region": "shoulders"
+          }
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Cable Curl",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 25,
+              "stepKg": 2.5,
+              "region": "biceps"
+            },
+            {
+              "name": "Rope Pushdown",
+              "sets": 2,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 35,
+              "stepKg": 2.5,
+              "region": "triceps"
+            }
+          ]
+        },
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Plank",
+            "sets": 2,
+            "reps": 45,
+            "unit": "seconds",
+            "region": "core"
+          }
+        }
+      ]
+    }
+  ],
+  "sessionRules": [
+    "Hareket başına tek ağır set, RPE 9–10.",
+    "Squat ve deadlift'te form bozulmadan 1 tekrar önce dur.",
+    "Hedef tekrarı RPE 7 veya altında yaptıysan sıradaki seans ağırlığı artır.",
+    "Gün kaçarsa telafi yok; takvimdeki günle devam."
+  ],
+  "runRule": {
+    "hrEasyMax": 155,
+    "hrWalkAbove": 162,
+    "text": "Kolay tempo: ortalama nabız 155'in altında. Nabız 162'yi geçerse yürü. Tempo ve interval yok."
+  },
+  "longRun": {
+    "kmByWeek": [
+      8,
+      10,
+      10,
+      12
+    ],
+    "hold": {
+      "min": 12,
+      "max": 14
+    }
+  },
+  "nutrition": {
+    "targets": {
+      "caloriesKcal": 2400,
+      "proteinG": 190,
+      "carbsG": 240,
+      "fatG": 75,
+      "waterL": 3,
+      "stepsMin": 8000
+    },
+    "meals": [
+      {
+        "id": "pre-workout",
+        "title": "Antrenman öncesi",
+        "items": [
+          "Kahve",
+          "İstersen 1 muz"
+        ],
+        "approxKcal": {
+          "min": 0,
+          "max": 100
+        }
       },
       {
-        "id": "run_stretch_5min",
-        "name": "Run Cooldown",
-        "durationMin": 5,
+        "id": "post-workout",
+        "title": "Antrenman sonrası",
         "items": [
-          {
-            "name": "Calf Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Soleus Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Quad Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Hamstring Stretch",
-            "durationSec": 30,
-            "eachSide": true
-          },
-          {
-            "name": "Deep Squat Hold",
-            "durationSec": 60,
-            "eachSide": false
-          }
-        ]
+          "2 ölçek whey",
+          "1 muz"
+        ],
+        "approxKcal": {
+          "min": 300,
+          "max": 300
+        },
+        "proteinG": 40
+      },
+      {
+        "id": "meal-1",
+        "title": "Öğün 1",
+        "time": "12:30",
+        "items": [
+          "300 g çiğ tavuk göğsü",
+          "100 g kuru pirinç",
+          "300 g sebze",
+          "15 g zeytinyağı",
+          "150 g yoğurt"
+        ],
+        "approxKcal": {
+          "min": 1000,
+          "max": 1000
+        },
+        "proteinG": 80
+      },
+      {
+        "id": "meal-2",
+        "title": "Öğün 2",
+        "time": "19:30",
+        "items": [
+          "300 g yağsız dana",
+          "100 g kuru makarna veya 400 g patates",
+          "Salata",
+          "10 g zeytinyağı",
+          "1 meyve"
+        ],
+        "approxKcal": {
+          "min": 1100,
+          "max": 1100
+        },
+        "proteinG": 70
       }
+    ],
+    "eatingOut": "1,5 porsiyon ızgara et veya tavuk, 1 porsiyon pilav veya ekmek, salata. Kızartma, tatlı ve kalorili içecek yok."
+  },
+  "supplements": {
+    "items": [
+      {
+        "name": "Kreatin monohidrat",
+        "dose": "5 g",
+        "timing": "Her gün",
+        "note": "İlk 2–3 haftada 1–1,5 kg su tutar; tartıdaki bu artış yağ değil."
+      },
+      {
+        "name": "Whey",
+        "dose": "2 ölçek",
+        "timing": "Antrenman sonrası"
+      },
+      {
+        "name": "Kafein",
+        "dose": "1–2 kahve",
+        "timing": "Antrenman öncesi",
+        "note": "14:00'ten sonra yok."
+      },
+      {
+        "name": "D3",
+        "dose": "1000–2000 IU",
+        "timing": "Kış boyunca"
+      },
+      {
+        "name": "Omega-3",
+        "dose": "1–2 g EPA+DHA",
+        "note": "Haftada 2'den az balık yiyorsan."
+      },
+      {
+        "name": "Magnezyum glisinat",
+        "dose": "200–400 mg",
+        "timing": "Akşam",
+        "optional": true
+      }
+    ],
+    "avoid": [
+      "BCAA",
+      "Yağ yakıcı",
+      "Testosteron artırıcı",
+      "Hazır pre-workout karışımları"
     ]
   },
-  "progressTracking": {
-    "weeklyCheckInDay": "Monday",
-    "weeklyCheckInTime": "morning_fasted",
-    "metrics": [
-      {
-        "key": "weightKg",
-        "label": "Weight",
-        "unit": "kg"
-      },
-      {
-        "key": "waistCm",
-        "label": "Waist",
-        "unit": "cm"
-      },
-      {
-        "key": "chestCm",
-        "label": "Chest",
-        "unit": "cm"
-      },
-      {
-        "key": "hipCm",
-        "label": "Hip",
-        "unit": "cm"
-      },
-      {
-        "key": "frontPhoto",
-        "label": "Front Photo",
-        "type": "image"
-      },
-      {
-        "key": "sidePhoto",
-        "label": "Side Photo",
-        "type": "image"
-      }
-    ],
-    "dailyChecklist": [
-      "completedWorkout",
-      "completedMorningMobility",
-      "completedStretching",
-      "hitProteinTarget",
-      "hitCalorieTarget",
-      "steps10000Plus",
-      "sleep75Plus",
-      "noAlcohol"
-    ],
-    "runningMetrics": [
-      "distanceKm",
-      "durationMin",
-      "averagePace",
-      "averageHeartRate",
-      "maxHeartRate",
-      "rpe",
-      "notes"
-    ],
-    "strengthMetrics": [
-      "exerciseName",
-      "weightKg",
-      "reps",
-      "rpe",
-      "progressionNote"
-    ]
-  },
-  "benchmark": {
-    "initialTask": "5K benchmark run",
-    "effort": "Race effort but not reckless",
-    "requiredData": [
-      "time",
-      "averagePace",
-      "averageHeartRate",
-      "maxHeartRate",
-      "notes"
-    ]
+  "sleepRule": "Salon sabahlarından önce 00:00'da yatakta. 6 saatten az uyuduysan seansı öğle arasına kaydır ya da Kısa seansı yap.",
+  "dailyChecklist": [
+    "completedWorkout",
+    "hitProteinTarget",
+    "inBedByMidnight"
+  ],
+  "aliases": {
+    "Pull Up / Lat Pulldown": "Lat Pulldown"
   }
 }

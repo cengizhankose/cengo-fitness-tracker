@@ -2,17 +2,17 @@ import { SCHEMA_VERSION } from '@/store'
 import type { PersistedState } from '@/store'
 import type { ChecklistKey, DayName } from '@/types/plan'
 import type {
-  BenchmarkResult,
   ActiveSession,
   CheckIn,
   DailyChecklist,
   DailyChecklistRecord,
   IsoDate,
+  LegacyChecklistKey,
   RunLogEntry,
+  SetKind,
   StrengthLogEntry,
   StrengthSet,
 } from '@/types/userData'
-import type { MarathonStatusRecord } from '@/types/marathon'
 import { parseLocalISODate, toLocalISODate } from '@/lib/dates'
 import {
   FORMAT_VERSION,
@@ -41,12 +41,17 @@ import type {
   ValidationIssue,
 } from './format'
 
-/** Exhaustive by construction — adding a ChecklistKey without listing it here won't compile. */
-const CHECKLIST_KEYS: Record<ChecklistKey, true> = {
+/**
+ * Every checklist key a stored record may carry: the current three plus the retired ones,
+ * which are kept verbatim so a pre-v2-plan record round-trips unchanged. Exhaustive by
+ * construction — adding a key to either union without listing it here won't compile.
+ */
+const CHECKLIST_KEYS: Record<ChecklistKey | LegacyChecklistKey, true> = {
   completedWorkout: true,
+  hitProteinTarget: true,
+  inBedByMidnight: true,
   completedMorningMobility: true,
   completedStretching: true,
-  hitProteinTarget: true,
   hitCalorieTarget: true,
   steps10000Plus: true,
   sleep75Plus: true,
@@ -67,6 +72,8 @@ const DAY_NAMES: Record<DayName, true> = {
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
 const MAX_ISSUES_REPORTED = 5
+/** The first persisted schema; every version from here up to SCHEMA_VERSION imports. */
+const OLDEST_SCHEMA_VERSION = 1
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 class Issues {
@@ -107,6 +114,10 @@ const isId = isBoundedString(MAX_ID_CHARS)
 /** `typeof v === 'number'` is not enough: JSON.parse('{"x":1e999}').x === Infinity. */
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
+}
+
+function isSetKind(v: unknown): v is SetKind {
+  return v === 'warmup' || v === 'working'
 }
 
 /** Reads an optional field: absent/undefined is fine, present-but-wrong is an issue. */
@@ -227,70 +238,26 @@ function validateChecklist(raw: unknown, issues: Issues): Record<IsoDate, DailyC
     }
     const items: DailyChecklist = {}
     for (const itemKey of Object.keys(rawItems)) {
-      // Unknown keys are dropped, not rejected: they'd never render (no CHECKLIST_META
-      // entry) but would bloat storage and skew perfectDays().
+      // Truly unknown keys are dropped, not rejected: they'd never render but would bloat
+      // storage. Retired keys are listed in CHECKLIST_KEYS and survive verbatim.
       if (!Object.hasOwn(CHECKLIST_KEYS, itemKey)) continue
       const value = rawItems[itemKey]
       if (typeof value !== 'boolean') {
         issues.add(`${path}.items.${itemKey}`, 'boolean', value)
         continue
       }
-      items[itemKey as ChecklistKey] = value
+      items[itemKey as ChecklistKey | LegacyChecklistKey] = value
     }
-    out[key] = { date: key, items, updatedAt }
-  }
-  return out
-}
-
-/**
- * Additive key (D4/D9): absent entirely in every pre-marathon backup, so a
- * missing/undefined value is the old-backup case and must validate clean, not
- * be reported as an issue. Anything present is validated exactly as strictly
- * as `validateChecklist`.
- */
-function validateMarathonStatus(
-  raw: unknown,
-  issues: Issues,
-): Record<IsoDate, MarathonStatusRecord> {
-  const out: Record<IsoDate, MarathonStatusRecord> = {}
-  if (raw === undefined) return out
-  if (!isRecord(raw)) {
-    issues.add('state.marathonStatus', 'object', raw)
-    return out
-  }
-  const allKeys = Object.keys(raw)
-  if (allKeys.length > MAX_MAP_ENTRIES) {
-    issues.add('state.marathonStatus', `≤ ${MAX_MAP_ENTRIES} entries`, `${allKeys.length} entries`)
-    return out
-  }
-  for (const key of allKeys) {
-    const path = `state.marathonStatus["${key}"]`
-    if (FORBIDDEN_KEYS.has(key)) {
-      issues.add(path, 'safe map key', key)
-      continue
-    }
-    if (!isIsoDate(key)) {
-      issues.add(path, 'YYYY-MM-DD map key', key)
-      continue
-    }
-    const rec = raw[key]
-    if (!isRecord(rec)) {
-      issues.add(path, 'object', rec)
-      continue
-    }
-    if (rec['date'] !== key) {
-      issues.add(`${path}.date`, `"${key}" (must equal map key)`, rec['date'])
-      continue
-    }
-    const status = rec['status']
-    if (status !== 'completed' && status !== 'skipped') {
-      issues.add(`${path}.status`, "'completed' | 'skipped'", status)
-      continue
-    }
-    const updatedAt = requireTimestamp(rec, 'updatedAt', path, issues)
-    if (!updatedAt) continue
-    const notes = optionalNotes(rec, path, issues)
-    out[key] = { date: key, status, updatedAt, ...(notes !== undefined ? { notes } : {}) }
+    // Provenance of an automatic workout tick; absent means the tick is user-owned.
+    const autoWorkout = optional(
+      rec,
+      'autoWorkout',
+      path,
+      (v): v is boolean => typeof v === 'boolean',
+      'boolean',
+      issues,
+    )
+    out[key] = { date: key, items, updatedAt, ...(autoWorkout === true ? { autoWorkout } : {}) }
   }
   return out
 }
@@ -355,7 +322,7 @@ function validateCheckIns(raw: unknown, issues: Issues): Record<IsoDate, CheckIn
 }
 
 function validateSets(raw: unknown, path: string, issues: Issues): StrengthSet[] | undefined {
-  // derive.ts:245 calls .reduce on this — a non-array crashes render.
+  // The stats libs reduce over this — a non-array crashes render.
   if (!Array.isArray(raw)) {
     issues.add(path, 'array', raw)
     return undefined
@@ -380,8 +347,13 @@ function validateSets(raw: unknown, path: string, issues: Issues): StrengthSet[]
       return undefined
     }
     const set: StrengthSet = { weightKg: rawSet['weightKg'], reps: rawSet['reps'] }
+    const id = optional(rawSet, 'id', setPath, isId, `string ≤ ${MAX_ID_CHARS} chars`, issues)
     const rpe = optional(rawSet, 'rpe', setPath, isFiniteNumber, 'finite number', issues)
+    // Absent kind means 'working'; anything else present would silently change a set's meaning.
+    const kind = optional(rawSet, 'kind', setPath, isSetKind, "'warmup' | 'working'", issues)
+    if (id !== undefined) set.id = id
     if (rpe !== undefined) set.rpe = rpe
+    if (kind !== undefined) set.kind = kind
     out.push(set)
   }
   return out
@@ -416,7 +388,7 @@ function validateStrengthLog(raw: unknown, issues: Issues): StrengthLogEntry[] {
       issues.add(`${path}.exerciseName`, `string ≤ ${MAX_NAME_CHARS} chars`, rec['exerciseName'])
       continue
     }
-    // derive.ts:244 / LogScreen.tsx:137 sort on createdAt; the merge orders by it too.
+    // History sorts on createdAt; the merge orders by it too.
     const createdAt = requireTimestamp(rec, 'createdAt', path, issues)
     if (!createdAt) continue
     const sets = validateSets(rec['sets'], `${path}.sets`, issues)
@@ -434,6 +406,18 @@ function validateStrengthLog(raw: unknown, issues: Issues): StrengthLogEntry[] {
       createdAt,
     }
     const note = optional(rec, 'progressionNote', path, isName, 'string', issues)
+    const sessionId = optional(rec, 'sessionId', path, isId, `string ≤ ${MAX_ID_CHARS} chars`, issues)
+    // An edited entry's stamp: the merge lets the newer edit of the same id win.
+    const updatedAt = optional(
+      rec,
+      'updatedAt',
+      path,
+      isIsoTimestamp,
+      'ISO timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)',
+      issues,
+    )
+    if (sessionId !== undefined) entry.sessionId = sessionId
+    if (updatedAt !== undefined) entry.updatedAt = updatedAt
     if (note !== undefined) entry.progressionNote = note
     out.push(entry)
   }
@@ -508,36 +492,7 @@ function validateRunLog(raw: unknown, issues: Issues): RunLogEntry[] {
   return out
 }
 
-function validateBenchmark(raw: unknown, issues: Issues): BenchmarkResult | undefined {
-  if (raw === undefined || raw === null) return undefined
-  const path = 'state.benchmark'
-  if (!isRecord(raw)) {
-    issues.add(path, 'object', raw)
-    return undefined
-  }
-  if (!isIsoDate(raw['date'])) {
-    issues.add(`${path}.date`, 'YYYY-MM-DD', raw['date'])
-    return undefined
-  }
-  if (!isFiniteNumber(raw['timeSec'])) {
-    issues.add(`${path}.timeSec`, 'finite number', raw['timeSec'])
-    return undefined
-  }
-  const createdAt = requireTimestamp(raw, 'createdAt', path, issues)
-  if (!createdAt) return undefined
-
-  const out: BenchmarkResult = { date: raw['date'], timeSec: raw['timeSec'], createdAt }
-  const pace = optional(raw, 'averagePace', path, isName, 'string', issues)
-  const avgHr = optional(raw, 'averageHeartRate', path, isFiniteNumber, 'finite number', issues)
-  const maxHr = optional(raw, 'maxHeartRate', path, isFiniteNumber, 'finite number', issues)
-  const notes = optionalNotes(raw, path, issues)
-  if (pace !== undefined) out.averagePace = pace
-  if (avgHr !== undefined) out.averageHeartRate = avgHr
-  if (maxHr !== undefined) out.maxHeartRate = maxHr
-  if (notes !== undefined) out.notes = notes
-  return out
-}
-
+/** Only a v3 file carries a session cursor this app can resume; see `validateState`. */
 function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | undefined {
   if (raw === undefined || raw === null) return undefined
   const path = 'state.activeSession'
@@ -548,17 +503,18 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
   const before = issues.all.length
   const id = raw['id']
   const date = raw['date']
-  const dayName = raw['dayName']
+  const planSessionId = raw['planSessionId']
   const exerciseNames = raw['exerciseNames']
   const currentIndex = raw['currentIndex']
   const startedAt = requireTimestamp(raw, 'startedAt', path, issues)
   if (!isId(id)) issues.add(`${path}.id`, `non-empty string ≤ ${MAX_ID_CHARS} chars`, id)
   if (!isIsoDate(date)) issues.add(`${path}.date`, 'YYYY-MM-DD', date)
-  if (typeof dayName !== 'string' || !Object.hasOwn(DAY_NAMES, dayName)) {
-    issues.add(`${path}.dayName`, 'weekday name', dayName)
+  if (!isId(planSessionId)) {
+    issues.add(`${path}.planSessionId`, `non-empty string ≤ ${MAX_ID_CHARS} chars`, planSessionId)
   }
-  if (!Array.isArray(exerciseNames) || exerciseNames.length === 0 || exerciseNames.length > 200) {
-    issues.add(`${path}.exerciseNames`, 'array(1..200)', exerciseNames)
+  // A free session starts empty and grows exercise by exercise.
+  if (!Array.isArray(exerciseNames) || exerciseNames.length > 200) {
+    issues.add(`${path}.exerciseNames`, 'array(0..200)', exerciseNames)
   } else {
     exerciseNames.forEach((name, index) => {
       if (!isName(name)) issues.add(`${path}.exerciseNames[${index}]`, 'exercise name', name)
@@ -567,7 +523,8 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
   if (
     !Number.isInteger(currentIndex) ||
     (currentIndex as number) < 0 ||
-    (Array.isArray(exerciseNames) && (currentIndex as number) >= exerciseNames.length)
+    (Array.isArray(exerciseNames) &&
+      (currentIndex as number) >= Math.max(exerciseNames.length, 1))
   ) {
     issues.add(`${path}.currentIndex`, 'valid exercise index', currentIndex)
   }
@@ -575,23 +532,28 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
   return {
     id: id as string,
     date: date as IsoDate,
-    dayName: dayName as DayName,
+    planSessionId: planSessionId as string,
     exerciseNames: exerciseNames as string[],
     currentIndex: currentIndex as number,
     startedAt,
   }
 }
 
-function validateState(raw: unknown, issues: Issues): PersistedState {
+/**
+ * Reads the slices this app still has. Anything else in the file — notably the retired slices
+ * of v1/v2 files — is ignored, never rejected, so old backups keep importing.
+ * A v1/v2 `activeSession` (old `dayName` shape) is dropped the same way the store migration
+ * drops it: it is only a cursor, and the sets it wrote are already in `strengthLog`.
+ * `settings` carries no fields any more; an old `programStartDate` inside it is ignored.
+ */
+function validateState(raw: unknown, schemaVersion: number, issues: Issues): PersistedState {
   const empty: PersistedState = {
-    settings: { programStartDate: toLocalISODate() },
+    settings: {},
     checklist: {},
     checkIns: {},
     strengthLog: [],
     runLog: [],
-    benchmark: undefined,
     activeSession: undefined,
-    marathonStatus: {},
     _schemaVersion: SCHEMA_VERSION,
   }
   if (!isRecord(raw)) {
@@ -599,26 +561,20 @@ function validateState(raw: unknown, issues: Issues): PersistedState {
     return empty
   }
   const rawSettings = raw['settings']
-  let programStartDate = empty.settings.programStartDate
-  if (!isRecord(rawSettings)) {
+  if (rawSettings !== undefined && !isRecord(rawSettings)) {
     issues.add('state.settings', 'object', rawSettings)
-  } else if (!isIsoDate(rawSettings['programStartDate'])) {
-    // parseLocalISODate does .split('-').map(Number) — a bad string yields
-    // new Date(NaN,…) and the Weekly screen renders undefined.
-    issues.add('state.settings.programStartDate', 'YYYY-MM-DD', rawSettings['programStartDate'])
-  } else {
-    programStartDate = rawSettings['programStartDate']
   }
 
   return {
-    settings: { programStartDate },
+    settings: {},
     checklist: validateChecklist(raw['checklist'], issues),
     checkIns: validateCheckIns(raw['checkIns'], issues),
     strengthLog: validateStrengthLog(raw['strengthLog'], issues),
     runLog: validateRunLog(raw['runLog'], issues),
-    benchmark: validateBenchmark(raw['benchmark'], issues),
-    activeSession: validateActiveSession(raw['activeSession'], issues),
-    marathonStatus: validateMarathonStatus(raw['marathonStatus'], issues),
+    activeSession:
+      schemaVersion === SCHEMA_VERSION
+        ? validateActiveSession(raw['activeSession'], issues)
+        : undefined,
     _schemaVersion: SCHEMA_VERSION,
   }
 }
@@ -734,8 +690,15 @@ export function validateBackup(raw: unknown): Result<BackupFile, ImportError> {
     }
   }
 
+  // Every schema this app has ever written is readable: validateState maps v1/v2 onto the
+  // current shape exactly as the store migration does. Only a newer schema is refused.
   const schemaVersion = raw['schemaVersion']
-  if (schemaVersion !== SCHEMA_VERSION) {
+  if (
+    typeof schemaVersion !== 'number' ||
+    !Number.isInteger(schemaVersion) ||
+    schemaVersion < OLDEST_SCHEMA_VERSION ||
+    schemaVersion > SCHEMA_VERSION
+  ) {
     return {
       ok: false,
       error: {
@@ -749,7 +712,7 @@ export function validateBackup(raw: unknown): Result<BackupFile, ImportError> {
   if (!isIsoTimestamp(raw['exportedAt'])) {
     issues.add('exportedAt', 'ISO timestamp (YYYY-MM-DDTHH:mm:ss.sssZ)', raw['exportedAt'])
   }
-  const state = validateState(raw['state'], issues)
+  const state = validateState(raw['state'], schemaVersion, issues)
   const photos = validatePhotos(raw['photos'], issues)
 
   if (issues.failed) {
@@ -763,7 +726,8 @@ export function validateBackup(raw: unknown): Result<BackupFile, ImportError> {
     }
   }
 
-  // Counts are recomputed rather than trusted — the file cannot misreport itself.
+  // Counts are recomputed rather than trusted — the file cannot misreport itself. The state is
+  // already in the current shape, so the decoded backup reports the current schema.
   return {
     ok: true,
     value: {

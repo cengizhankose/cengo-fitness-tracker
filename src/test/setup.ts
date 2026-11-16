@@ -5,7 +5,6 @@ import { cleanup } from '@testing-library/react'
 import * as axeMatchers from 'vitest-axe/matchers'
 import { clear } from 'idb-keyval'
 import { useStore } from '@/store'
-import { mondayOf, toLocalISODate } from '@/lib/dates'
 
 expect.extend(axeMatchers)
 
@@ -76,14 +75,12 @@ beforeEach(async () => {
   sessionStorage.clear()
   await clear()
   useStore.setState({
-    settings: { programStartDate: mondayOf(toLocalISODate()) },
+    settings: {},
     checklist: {},
     checkIns: {},
     strengthLog: [],
     runLog: [],
-    benchmark: undefined,
     activeSession: undefined,
-    marathonStatus: {},
   })
 })
 

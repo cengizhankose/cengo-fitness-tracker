@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { migrateState, useStore, type PersistedState } from '@/store'
 import { addDays, toLocalISODate } from '@/lib/dates'
-import type { IsoDate } from '@/types/userData'
+import { legacyState } from '@/test/fixtures'
+import type { DailyChecklistRecord, IsoDate, StrengthLogEntry } from '@/types/userData'
 
 const today: IsoDate = toLocalISODate()
 
@@ -51,10 +52,10 @@ describe('removing the last log of a date', () => {
   })
 
   it('keeps other checklist items on the day intact', () => {
-    state().toggleChecklistItem(today, 'noAlcohol')
+    state().toggleChecklistItem(today, 'hitProteinTarget')
     const id = logStrength(today)
     state().removeStrengthEntry(id)
-    expect(record(today)?.items.noAlcohol).toBe(true)
+    expect(record(today)?.items.hitProteinTarget).toBe(true)
     expect(ticked(today)).toBe(false)
   })
 })
@@ -137,7 +138,7 @@ describe('manual vs automatic ownership', () => {
 
   it('does not disturb provenance when another checklist key is toggled', () => {
     const id = logStrength(today)
-    state().toggleChecklistItem(today, 'sleep75Plus')
+    state().toggleChecklistItem(today, 'inBedByMidnight')
     expect(record(today)?.autoWorkout).toBe(true)
 
     state().removeStrengthEntry(id)
@@ -161,139 +162,198 @@ describe('edge cases', () => {
     expect(state().strengthLog).toHaveLength(1)
     expect(state().checklist).toBe(before)
   })
+})
 
-  it('does not let a benchmark hold the tick — the run entry is the workout record', () => {
-    const runId = logRun(today, 5)
-    useStore.setState({
-      benchmark: {
-        date: today,
-        timeSec: 1500,
-        averagePace: '5:00/km',
-        createdAt: new Date().toISOString(),
-      },
+describe('migrateState (v1/v2 -> v3)', () => {
+  const versions = [1, 2] as const
+
+  for (const v of versions) {
+    it(`v${v}: bumps the version and drops retired slices`, () => {
+      const input = legacyState(v)
+      const next = migrateState(input, v)
+      expect(next._schemaVersion).toBe(3)
+      expect(next).not.toHaveProperty('marathonStatus')
+      expect(next).not.toHaveProperty('benchmark')
+      expect(next).not.toHaveProperty('activeSession')
     })
 
-    state().removeRunEntry(runId)
+    it(`v${v}: keeps every user slice as the very same reference`, () => {
+      const input = legacyState(v)
+      const next = migrateState(input, v)
+      expect(next.settings).toBe(input.settings)
+      expect(next.checklist).toBe(input.checklist)
+      expect(next.checkIns).toBe(input.checkIns)
+      expect(next.strengthLog).toBe(input.strengthLog)
+      expect(next.runLog).toBe(input.runLog)
+    })
 
-    expect(ticked(today)).toBe(false)
-    expect(state().benchmark).toBeDefined()
+    it(`v${v}: preserves legacy checklist keys verbatim and never invents autoWorkout`, () => {
+      const next = migrateState(legacyState(v), v)
+      expect(next.checklist['2026-08-03']?.items).toEqual({
+        completedWorkout: true,
+        noAlcohol: true,
+        completedMorningMobility: false,
+      })
+      expect(next.checklist['2026-08-04']?.items).toEqual({
+        hitCalorieTarget: true,
+        steps10000Plus: true,
+        sleep75Plus: true,
+      })
+      for (const rec of Object.values(next.checklist)) {
+        expect(rec).not.toHaveProperty('autoWorkout')
+      }
+    })
+  }
+
+  it('returns v3 input as-is', () => {
+    const input = { ...legacyState(2), _schemaVersion: 3 } as unknown as PersistedState
+    expect(migrateState(input, 3)).toBe(input)
   })
 })
 
-describe('migrateState (v1 -> v2)', () => {
-  const base = (checklist: PersistedState['checklist']): PersistedState => ({
-    settings: { programStartDate: '2026-01-05' },
-    checklist,
-    checkIns: {},
-    strengthLog: [
-      {
-        id: 's1',
-        date: '2026-01-06',
-        exerciseName: 'Squat',
-        sets: [{ weightKg: 100, reps: 5 }],
-        createdAt: '2026-01-06T10:00:00.000Z',
-      },
-    ],
-    runLog: [],
-    benchmark: undefined,
-    marathonStatus: {},
-    _schemaVersion: 1,
-  })
+describe('legacy data rehydrated through the persist middleware', () => {
+  const DAY: IsoDate = '2026-08-03'
 
-  const legacy = base({
-    '2026-01-06': {
-      date: '2026-01-06',
-      items: { completedWorkout: true, noAlcohol: true },
-      updatedAt: '2026-01-06T10:00:00.000Z',
-    },
-    '2026-01-07': {
-      date: '2026-01-07',
-      items: { completedWorkout: true },
-      updatedAt: '2026-01-07T10:00:00.000Z',
-    },
-    '2026-01-08': {
-      date: '2026-01-08',
-      items: { completedWorkout: false, sleep75Plus: true },
-      updatedAt: '2026-01-08T10:00:00.000Z',
-    },
-  })
+  for (const v of [1, 2] as const) {
+    describe(`v${v} envelope`, () => {
+      beforeEach(async () => {
+        localStorage.setItem('cengo-cut', JSON.stringify({ state: legacyState(v), version: v }))
+        await useStore.persist.rehydrate()
+      })
 
-  it('never infers automatic provenance — a same-day log does not prove the tick was automatic', () => {
-    const next = migrateState(legacy, 1)
-    // 2026-01-06 is ticked AND has a strength log, yet stays user-owned: v1 cannot tell us who
-    // set the tick, so revoking it later would risk destroying a manual one.
-    expect(next.checklist['2026-01-06']?.autoWorkout).toBeUndefined()
-    expect(next.checklist['2026-01-07']?.autoWorkout).toBeUndefined()
-    expect(next.checklist['2026-01-08']?.autoWorkout).toBeUndefined()
-  })
+      it('migrates to schema 3 and drops retired slices', () => {
+        expect(state()._schemaVersion).toBe(3)
+        expect(state().activeSession).toBeUndefined()
+        expect(state()).not.toHaveProperty('marathonStatus')
+        expect(state()).not.toHaveProperty('benchmark')
+      })
 
-  it('preserves every existing item and log, and bumps the version', () => {
-    const next = migrateState(legacy, 1)
-    expect(next.checklist).toEqual(legacy.checklist)
-    expect(next.checklist['2026-01-06']?.items).toEqual({
-      completedWorkout: true,
-      noAlcohol: true,
+      it('keeps legacy checklist keys without inventing provenance', () => {
+        expect(ticked(DAY)).toBe(true)
+        expect(record(DAY)?.autoWorkout).toBeUndefined()
+        expect(record(DAY)?.items.noAlcohol).toBe(true)
+        expect(record('2026-08-04')?.items.sleep75Plus).toBe(true)
+        expect(state().strengthLog).toHaveLength(1)
+      })
+
+      it("keeps the legacy tick when the day's last legacy log is deleted", () => {
+        state().removeStrengthEntry('legacy-s1')
+
+        expect(state().strengthLog).toHaveLength(0)
+        expect(ticked(DAY)).toBe(true) // manual-by-default: never revoked
+        expect(record(DAY)?.items.noAlcohol).toBe(true)
+      })
     })
-    expect(next.strengthLog).toEqual(legacy.strengthLog)
-    expect(next.checkIns).toEqual(legacy.checkIns)
-    expect(next.settings).toEqual(legacy.settings)
-    expect(next._schemaVersion).toBe(2)
-  })
-
-  it('is a no-op once already on v2', () => {
-    const next = migrateState(legacy, 2)
-    expect(next).toBe(legacy)
-  })
+  }
 })
 
-describe('legacy v1 data rehydrated through the persist middleware', () => {
-  const DAY: IsoDate = '2026-01-06'
+describe('updateStrengthEntry', () => {
+  const OLD: IsoDate = '2026-11-16'
+  const NEW: IsoDate = '2026-11-17'
+  const entry = (id: string) => state().strengthLog.find((e) => e.id === id)
 
-  /** A real localStorage envelope as written by the shipped v1 build. */
-  const v1Envelope = JSON.stringify({
-    version: 1,
-    state: {
-      settings: { programStartDate: '2026-01-05' },
-      checklist: {
-        [DAY]: {
-          date: DAY,
-          // The user ticked this by hand. v1 stored no provenance to say so.
-          items: { completedWorkout: true, noAlcohol: true },
-          updatedAt: '2026-01-06T09:00:00.000Z',
-        },
-      },
-      checkIns: {},
-      strengthLog: [
-        {
-          id: 'legacy-s1',
-          date: DAY,
-          exerciseName: 'Squat',
-          sets: [{ weightKg: 100, reps: 5 }],
-          createdAt: '2026-01-06T10:00:00.000Z',
-        },
+  it('reverts the old date auto-tick when no log remains there and ticks the new date', () => {
+    const id = logStrength(OLD)
+    expect(state().updateStrengthEntry(id, { date: NEW })).toBe(true)
+
+    expect(entry(id)?.date).toBe(NEW)
+    expect(ticked(OLD)).toBe(false)
+    expect(record(OLD)?.autoWorkout).toBeUndefined()
+    expect(ticked(NEW)).toBe(true)
+    expect(record(NEW)?.autoWorkout).toBe(true)
+  })
+
+  it('keeps the old date ticked while another log remains there', () => {
+    const id = logStrength(OLD, 'Squat')
+    logStrength(OLD, 'Bench')
+    state().updateStrengthEntry(id, { date: NEW })
+
+    expect(ticked(OLD)).toBe(true)
+    expect(record(OLD)?.autoWorkout).toBe(true)
+    expect(ticked(NEW)).toBe(true)
+  })
+
+  it('leaves a manual tick on the old date alone', () => {
+    state().setChecklistItem(OLD, 'completedWorkout', true)
+    const id = logStrength(OLD)
+    state().updateStrengthEntry(id, { date: NEW })
+
+    expect(ticked(OLD)).toBe(true)
+    expect(record(OLD)?.autoWorkout).toBeUndefined()
+    expect(record(NEW)?.autoWorkout).toBe(true)
+  })
+
+  it('a same-date set edit bumps updatedAt, keeps id/createdAt, stamps set ids and spares the checklist', () => {
+    const id = logStrength(OLD)
+    const before = entry(id)!
+    const checklist = state().checklist
+
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'))
+    state().updateStrengthEntry(id, {
+      sets: [
+        { weightKg: 105, reps: 5 },
+        { id: 'keep-me', weightKg: 110, reps: 3 },
       ],
-      runLog: [],
-      _schemaVersion: 1,
-    },
+    })
+
+    const after = entry(id)!
+    expect(after.id).toBe(id)
+    expect(after.createdAt).toBe(before.createdAt)
+    expect(after.updatedAt).toBe('2030-01-01T00:00:00.000Z')
+    expect(after.sets).toHaveLength(2)
+    expect(after.sets[0]?.id).toBeTruthy()
+    expect(after.sets[0]?.weightKg).toBe(105)
+    expect(after.sets[1]?.id).toBe('keep-me')
+    expect(state().checklist).toBe(checklist)
   })
 
-  beforeEach(async () => {
-    localStorage.setItem('cengo-cut', v1Envelope)
-    await useStore.persist.rehydrate()
+  it('edits exerciseName and progressionNote, and an empty note clears it', () => {
+    const id = logStrength(OLD)
+    state().updateStrengthEntry(id, { exerciseName: 'Front Squat', progressionNote: '+2.5kg' })
+    expect(entry(id)?.exerciseName).toBe('Front Squat')
+    expect(entry(id)?.progressionNote).toBe('+2.5kg')
+
+    state().updateStrengthEntry(id, { progressionNote: '' })
+    expect(entry(id)).not.toHaveProperty('progressionNote')
+    expect(entry(id)?.exerciseName).toBe('Front Squat')
   })
 
-  it('migrates without inventing provenance', () => {
-    expect(state()._schemaVersion).toBe(2)
-    expect(ticked(DAY)).toBe(true)
-    expect(record(DAY)?.autoWorkout).toBeUndefined()
-    expect(state().strengthLog).toHaveLength(1)
+  it('empty sets removes the entry and reverts the auto-tick', () => {
+    const id = logStrength(OLD)
+    expect(state().updateStrengthEntry(id, { sets: [] })).toBe(true)
+    expect(entry(id)).toBeUndefined()
+    expect(ticked(OLD)).toBe(false)
   })
 
-  it("keeps the tick when the day's last legacy log is deleted", () => {
-    state().removeStrengthEntry('legacy-s1')
+  it('returns false for an unknown id and changes nothing', () => {
+    logStrength(OLD)
+    const log: StrengthLogEntry[] = state().strengthLog
+    const checklist: Record<IsoDate, DailyChecklistRecord> = state().checklist
+    expect(state().updateStrengthEntry('nope', { date: NEW, sets: [] })).toBe(false)
+    expect(state().strengthLog).toBe(log)
+    expect(state().checklist).toBe(checklist)
+  })
+})
 
-    expect(state().strengthLog).toHaveLength(0)
-    expect(ticked(DAY)).toBe(true) // manual-by-default: never revoked
-    expect(record(DAY)?.items.noAlcohol).toBe(true)
+describe('saveCheckIn', () => {
+  it('stores a non-Monday date under exactly that key and merges later saves', () => {
+    const WED: IsoDate = '2026-11-18'
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-18T06:00:00.000Z'))
+    state().saveCheckIn({ date: WED, weightKg: 95.1 })
+
+    expect(Object.keys(state().checkIns)).toEqual([WED])
+    const first = state().checkIns[WED]!
+    expect(first.date).toBe(WED)
+
+    vi.setSystemTime(new Date('2026-11-18T07:00:00.000Z'))
+    state().saveCheckIn({ date: WED, waistCm: 100 })
+
+    const second = state().checkIns[WED]!
+    expect(second).toMatchObject({ date: WED, weightKg: 95.1, waistCm: 100 })
+    expect(second.createdAt).toBe(first.createdAt)
+    expect(second.updatedAt).toBe('2026-11-18T07:00:00.000Z')
+    expect(second.updatedAt).not.toBe(first.updatedAt)
   })
 })

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { groupByRecency, formatActivityDuration, formatActivityDistance } from './activities'
+import {
+  groupByRecency,
+  formatActivityDuration,
+  formatActivityDistance,
+  isRunActivity,
+  manualRuns,
+} from './activities'
+import type { RunLogEntry } from '@/types/userData'
 import type { Activity } from '@/types/activities'
 
 const TUESDAY = '2026-09-08' // same week as WEDNESDAY_TODAY below (Monday = 2026-09-07)
@@ -51,22 +58,42 @@ describe('groupByRecency', () => {
 })
 
 describe('formatActivityDuration', () => {
-  it('formats under an hour as "N min"', () => {
-    expect(formatActivityDuration(32)).toBe('32 min')
+  it('formats under an hour as "N dk"', () => {
+    expect(formatActivityDuration(32)).toBe('32 dk')
   })
 
-  it('formats an hour or more as "Hh Mm"', () => {
-    expect(formatActivityDuration(72)).toBe('1h 12m')
+  it('formats an hour or more as "H sa M dk"', () => {
+    expect(formatActivityDuration(72)).toBe('1 sa 12 dk')
   })
 
   it('rounds fractional minutes', () => {
-    expect(formatActivityDuration(32.6)).toBe('33 min')
+    expect(formatActivityDuration(32.6)).toBe('33 dk')
   })
 })
 
 describe('formatActivityDistance', () => {
-  it('formats to at most 2 decimals', () => {
-    expect(formatActivityDistance(6.4)).toBe('6.4 km')
-    expect(formatActivityDistance(0.752)).toBe('0.75 km')
+  it('formats to at most 2 decimals with a decimal comma', () => {
+    expect(formatActivityDistance(6.4)).toBe('6,4 km')
+    expect(formatActivityDistance(0.752)).toBe('0,75 km')
+    expect(formatActivityDistance(42.66)).toBe('42,66 km')
+  })
+})
+
+describe('isRunActivity', () => {
+  it('accepts every running-type activity and nothing else', () => {
+    expect(isRunActivity(makeActivity({ type: 'treadmill_running' }))).toBe(true)
+    expect(isRunActivity(makeActivity({ type: 'track_running' }))).toBe(true)
+    expect(isRunActivity(makeActivity({ type: 'walking', sportGroup: 'other' }))).toBe(false)
+    expect(isRunActivity(makeActivity({ type: 'open_water_swimming', sportGroup: 'swim' }))).toBe(false)
+  })
+})
+
+describe('manualRuns', () => {
+  it('drops runLog entries mirrored from Garmin', () => {
+    const runs: RunLogEntry[] = [
+      { id: 'garmin-24207602358', date: '2026-09-02', distanceKm: 1.8, averagePace: '38:36', createdAt: 'x' },
+      { id: '862cbbd6-4499-48f7-b903-d61a1b34913a', date: '2026-09-15', distanceKm: 6, createdAt: 'x' },
+    ]
+    expect(manualRuns(runs).map((r) => r.id)).toEqual(['862cbbd6-4499-48f7-b903-d61a1b34913a'])
   })
 })

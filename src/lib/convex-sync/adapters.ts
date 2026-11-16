@@ -1,19 +1,13 @@
 // Pure record <-> wire-record transforms. Every synced type is reused as-is from
 // src/types except where a field genuinely can't cross the wire unchanged: CheckIn's photo
-// keys (local-only) and StrengthLogEntry/RunLogEntry/BenchmarkResult's optional-or-absent
-// updatedAt (LWW needs one on every record).
-import type {
-  CheckIn,
-  RunLogEntry,
-  StrengthLogEntry,
-  BenchmarkResult,
-  IsoTimestamp,
-} from '@/types/userData'
+// keys (local-only) and StrengthLogEntry/RunLogEntry's optional-or-absent updatedAt (LWW
+// needs one on every record).
+import type { CheckIn, RunLogEntry, StrengthLogEntry, IsoTimestamp } from '@/types/userData'
 import type { Activity } from '@/types/activities'
-import type { CheckInWire, RunWire, BenchmarkWire } from './types'
+import type { CheckInWire, RunWire } from './types'
 
-/** `updatedAt` when present, else `createdAt`. Strength-log entries only ever get an
- *  updatedAt once they're touched by the session flow; ad-hoc log entries never are. */
+/** `updatedAt` when present, else `createdAt`. Strength-log entries only get an updatedAt
+ *  once the session flow or a correction touches them; untouched ad-hoc entries never do. */
 export function effectiveUpdatedAt(e: { updatedAt?: IsoTimestamp; createdAt: IsoTimestamp }): IsoTimestamp {
   return e.updatedAt ?? e.createdAt
 }
@@ -51,22 +45,6 @@ export function runEntryFromWire(w: RunWire): RunLogEntry {
     rpe: w.rpe,
     notes: w.notes,
     scheduleDay: w.scheduleDay,
-    createdAt: w.createdAt,
-  }
-}
-
-export function benchmarkToWire(b: BenchmarkResult): BenchmarkWire {
-  return { ...b, updatedAt: effectiveUpdatedAt(b) }
-}
-
-export function benchmarkFromWire(w: BenchmarkWire): BenchmarkResult {
-  return {
-    date: w.date,
-    timeSec: w.timeSec,
-    averagePace: w.averagePace,
-    averageHeartRate: w.averageHeartRate,
-    maxHeartRate: w.maxHeartRate,
-    notes: w.notes,
     createdAt: w.createdAt,
   }
 }

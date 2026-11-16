@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { CheckIn, StrengthLogEntry } from '@/types/userData'
 import { mergeState } from './merge'
 import type { MergeOptions } from './merge'
-import { makeState, populatedState } from '@/test/fixtures'
+import { validateBackup } from './validate'
+import { legacyBackupDoc, legacyState, makeState, populatedState } from '@/test/fixtures'
 
 const NO_PHOTOS: Pick<MergeOptions, 'localPhotoKeys' | 'filePhotoKeys'> = {
   localPhotoKeys: new Set(),
@@ -12,7 +13,7 @@ const NO_PHOTOS: Pick<MergeOptions, 'localPhotoKeys' | 'filePhotoKeys'> = {
 const TOKEN = 'tok0'
 
 function opts(over: Partial<MergeOptions> = {}): MergeOptions {
-  return { mode: 'merge', includeSettings: false, stageToken: TOKEN, ...NO_PHOTOS, ...over }
+  return { mode: 'merge', stageToken: TOKEN, ...NO_PHOTOS, ...over }
 }
 
 const strength = (id: string, weightKg: number, createdAt: string): StrengthLogEntry => ({
@@ -31,21 +32,22 @@ const checkIn = (over: Partial<CheckIn> = {}): CheckIn => ({
 })
 
 describe('settings', () => {
-  it('keeps the local program start date by default', () => {
-    const local = makeState({ settings: { programStartDate: '2026-08-03' } })
-    const incoming = makeState({ settings: { programStartDate: '2026-05-11' } })
-    const { next, report } = mergeState(local, incoming, opts())
-    expect(next.settings.programStartDate).toBe('2026-08-03')
-    expect(report.settings).toBe('kept-local')
+  it('merge keeps the local settings', () => {
+    const localSettings = {}
+    const incomingSettings = {}
+    const local = makeState({ settings: localSettings })
+    const incoming = makeState({ settings: incomingSettings })
+    expect(mergeState(local, incoming, opts()).next.settings).toBe(localSettings)
   })
 
-  it('adopts it when explicitly asked, and always in replace mode', () => {
-    const local = makeState({ settings: { programStartDate: '2026-08-03' } })
-    const incoming = makeState({ settings: { programStartDate: '2026-05-11' } })
-    expect(mergeState(local, incoming, opts({ includeSettings: true })).next.settings)
-      .toEqual({ programStartDate: '2026-05-11' })
-    expect(mergeState(local, incoming, opts({ mode: 'replace' })).next.settings)
-      .toEqual({ programStartDate: '2026-05-11' })
+  it('replace takes the incoming settings', () => {
+    const localSettings = {}
+    const incomingSettings = {}
+    const local = makeState({ settings: localSettings })
+    const incoming = makeState({ settings: incomingSettings })
+    expect(mergeState(local, incoming, opts({ mode: 'replace' })).next.settings).toBe(
+      incomingSettings,
+    )
   })
 })
 
@@ -74,6 +76,14 @@ describe('checklist', () => {
     const incoming = makeState({ checklist: rec(t, { completedWorkout: true, noAlcohol: true }) })
     const { next } = mergeState(local, incoming, opts())
     expect(Object.keys(next.checklist['2026-08-03']?.items ?? {})).toHaveLength(2)
+  })
+
+  it('keeps legacy checklist keys of whichever record wins', () => {
+    const legacyItems = { completedWorkout: true, noAlcohol: true, steps10000Plus: false }
+    const older = makeState({ checklist: rec('2026-08-03T10:00:00.000Z', { completedWorkout: true }) })
+    const newerLegacy = makeState({ checklist: rec('2026-08-03T18:00:00.000Z', legacyItems) })
+    expect(mergeState(older, newerLegacy, opts()).next.checklist['2026-08-03']?.items).toEqual(legacyItems)
+    expect(mergeState(newerLegacy, older, opts()).next.checklist['2026-08-03']?.items).toEqual(legacyItems)
   })
 
   it('adds days the local state has never seen', () => {
@@ -169,6 +179,53 @@ describe('strength / run logs', () => {
     expect(report.idConflicts).toEqual(['a'])
   })
 
+  it('lets an incoming copy with a strictly newer updatedAt replace the local one', () => {
+    const local = makeState({
+      strengthLog: [{ ...strength('a', 80, '2026-08-03T18:00:00.000Z'), updatedAt: '2026-08-03T18:05:00.000Z' }],
+    })
+    const incoming = makeState({
+      strengthLog: [{ ...strength('a', 100, '2026-08-03T18:00:00.000Z'), updatedAt: '2026-08-04T09:00:00.000Z' }],
+    })
+    const { next, report } = mergeState(local, incoming, opts())
+    expect(next.strengthLog).toHaveLength(1)
+    expect(next.strengthLog[0]?.sets[0]?.weightKg).toBe(100)
+    expect(next.strengthLog[0]?.updatedAt).toBe('2026-08-04T09:00:00.000Z')
+    expect(report.updated).toBe(1)
+    expect(report.added).toBe(0)
+    expect(report.idConflicts).toEqual([])
+  })
+
+  it('keeps local and reports the id when the incoming stamp is older or equal', () => {
+    const localEntry = { ...strength('a', 80, '2026-08-03T18:00:00.000Z'), updatedAt: '2026-08-04T09:00:00.000Z' }
+    const local = makeState({ strengthLog: [localEntry] })
+    for (const updatedAt of ['2026-08-03T19:00:00.000Z', '2026-08-04T09:00:00.000Z']) {
+      const incoming = makeState({
+        strengthLog: [{ ...strength('a', 100, '2026-08-03T18:00:00.000Z'), updatedAt }],
+      })
+      const { next, report } = mergeState(local, incoming, opts())
+      expect(next.strengthLog).toEqual([localEntry])
+      expect(report.idConflicts).toEqual(['a'])
+      expect(report.updated).toBe(0)
+    }
+  })
+
+  it('treats a deep-equal copy with an updatedAt as a no-op', () => {
+    const entry: StrengthLogEntry = {
+      ...strength('a', 80, '2026-08-03T18:00:00.000Z'),
+      sets: [{ id: 'x1', weightKg: 80, reps: 8, kind: 'working' }],
+      sessionId: 'session-9',
+      updatedAt: '2026-08-04T09:00:00.000Z',
+    }
+    const { next, report } = mergeState(
+      makeState({ strengthLog: [entry] }),
+      makeState({ strengthLog: [JSON.parse(JSON.stringify(entry)) as StrengthLogEntry] }),
+      opts(),
+    )
+    expect(next.strengthLog).toEqual([entry])
+    expect(next.strengthLog[0]).toBe(entry)
+    expect(report).toMatchObject({ added: 0, updated: 0, removed: 0, idConflicts: [] })
+  })
+
   it('sorts newest first, matching what the Log screen renders', () => {
     const local = makeState({ strengthLog: [strength('a', 80, '2026-08-01T10:00:00.000Z')] })
     const incoming = makeState({
@@ -185,33 +242,10 @@ describe('strength / run logs', () => {
   })
 })
 
-describe('benchmark', () => {
-  const bench = (createdAt: string, timeSec: number) => ({
-    date: '2026-08-02',
-    timeSec,
-    createdAt,
-  })
-
-  it('takes the newer one', () => {
-    const local = makeState({ benchmark: bench('2026-08-02T09:00:00.000Z', 1380) })
-    const incoming = makeState({ benchmark: bench('2026-09-02T09:00:00.000Z', 1300) })
-    const { next, report } = mergeState(local, incoming, opts())
-    expect(next.benchmark?.timeSec).toBe(1300)
-    expect(report.benchmark).toBe('took-incoming')
-  })
-
-  it('never clears a local benchmark in merge mode', () => {
-    const local = makeState({ benchmark: bench('2026-08-02T09:00:00.000Z', 1380) })
-    const { next } = mergeState(local, makeState(), opts())
-    expect(next.benchmark?.timeSec).toBe(1380)
-  })
-})
-
 describe('replace mode', () => {
   it('swaps every collection and reports removals', () => {
     const local = populatedState()
     const incoming = makeState({
-      settings: { programStartDate: '2026-05-11' },
       runLog: [
         { id: 'r9', date: '2026-05-11', distanceKm: 5, createdAt: '2026-05-11T06:00:00.000Z' },
       ],
@@ -219,75 +253,45 @@ describe('replace mode', () => {
     const { next, report } = mergeState(local, incoming, opts({ mode: 'replace' }))
     expect(next.strengthLog).toEqual([])
     expect(next.runLog.map((e) => e.id)).toEqual(['r9'])
-    expect(next.benchmark).toBeUndefined()
-    expect(next.marathonStatus).toEqual({})
     expect(report.added).toBe(1)
-    // populatedState() carries one marathonStatus record alongside the other 6 (Slice 9).
+    // populatedState(): 2 checklist days, 2 check-ins, 2 strength entries, 1 run.
     expect(report.removed).toBe(7)
   })
 })
 
-describe('marathonStatus (Slice 9)', () => {
-  const rec = (date: string, status: 'completed' | 'skipped', updatedAt: string, notes?: string) => ({
-    date,
-    status,
-    notes,
-    updatedAt,
+describe('merge mode never deletes a local record', () => {
+  it('keeps every local record when the incoming state is empty', () => {
+    const local = populatedState()
+    const { next, report } = mergeState(local, makeState(), opts({
+      localPhotoKeys: new Set(['photo:2026-11-16:front', 'photo:2026-11-16:side']),
+    }))
+    expect(next).toEqual(local)
+    expect(report.removed).toBe(0)
   })
 
-  it('merge mode: newer updatedAt wins', () => {
-    const local = makeState({
-      marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z') },
-    })
-    const incoming = makeState({
-      marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', '2026-09-02T18:00:00.000Z') },
-    })
-    const { next } = mergeState(local, incoming, opts())
-    expect(next.marathonStatus['2026-09-02']?.status).toBe('skipped')
-  })
+  it('adds a validated v2 backup onto a populated local state and removes nothing', () => {
+    const validated = validateBackup(legacyBackupDoc(2))
+    if (!validated.ok) throw new Error(`legacy fixture did not validate: ${validated.error.code}`)
+    const incoming = validated.value.state
+    const legacy = legacyState(2)
+    const local = populatedState()
+    const { next, report } = mergeState(local, incoming, opts({
+      localPhotoKeys: new Set(['photo:2026-11-16:front', 'photo:2026-11-16:side']),
+    }))
 
-  it('merge mode: a tie keeps local', () => {
-    const t = '2026-09-02T10:00:00.000Z'
-    const local = makeState({ marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', t) } })
-    const incoming = makeState({ marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', t) } })
-    const { next } = mergeState(local, incoming, opts())
-    expect(next.marathonStatus['2026-09-02']?.status).toBe('completed')
-  })
-
-  it('merge mode: adds a date the local state has never seen', () => {
-    const local = makeState()
-    const incoming = makeState({
-      marathonStatus: { '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z') },
-    })
-    const { next, report } = mergeState(local, incoming, opts())
-    expect(Object.keys(next.marathonStatus)).toEqual(['2026-09-02'])
-    expect(report.added).toBe(1)
-  })
-
-  it('replace mode takes the incoming map wholesale', () => {
-    const local = makeState({
-      marathonStatus: { '2026-08-31': rec('2026-08-31', 'completed', '2026-08-31T10:00:00.000Z') },
-    })
-    const incoming = makeState({
-      marathonStatus: { '2026-09-02': rec('2026-09-02', 'skipped', '2026-09-02T10:00:00.000Z') },
-    })
-    const { next } = mergeState(local, incoming, opts({ mode: 'replace' }))
-    expect(Object.keys(next.marathonStatus)).toEqual(['2026-09-02'])
-  })
-
-  it('report.added/updated count marathon records via recordEntries', () => {
-    const local = makeState({
-      marathonStatus: { '2026-08-31': rec('2026-08-31', 'completed', '2026-08-31T10:00:00.000Z') },
-    })
-    const incoming = makeState({
-      marathonStatus: {
-        '2026-08-31': rec('2026-08-31', 'skipped', '2026-08-31T18:00:00.000Z'),
-        '2026-09-02': rec('2026-09-02', 'completed', '2026-09-02T10:00:00.000Z'),
-      },
-    })
-    const { report } = mergeState(local, incoming, opts())
-    expect(report.added).toBe(1)
-    expect(report.updated).toBe(1)
+    expect(report.removed).toBe(0)
+    expect(report.idConflicts).toEqual([])
+    // 2 checklist days, 1 check-in, 1 strength entry, 1 run.
+    expect(report.added).toBe(5)
+    expect(next.checklist).toEqual({ ...local.checklist, ...(legacy['checklist'] as object) })
+    expect(next.checkIns).toEqual({ ...local.checkIns, ...(legacy['checkIns'] as object) })
+    expect(next.strengthLog.map((e) => e.id).sort()).toEqual(['legacy-s1', 's1', 's2'])
+    expect(next.runLog.map((e) => e.id).sort()).toEqual(['legacy-r1', 'r1'])
+    for (const entry of local.strengthLog) expect(next.strengthLog).toContainEqual(entry)
+    expect(next.settings).toBe(local.settings)
+    expect(next.activeSession).toBeUndefined()
+    expect('benchmark' in next).toBe(false)
+    expect('marathonStatus' in next).toBe(false)
   })
 })
 
@@ -442,9 +446,9 @@ describe('idempotency', () => {
           updatedAt: '2026-08-06T18:00:00.000Z',
         },
       },
-      strengthLog: [strength('s2', 85, '2026-08-06T18:00:00.000Z')],
+      strengthLog: [strength('s3', 85, '2026-08-06T18:00:00.000Z')],
     })
-    const photoOpts = opts({ localPhotoKeys: new Set(['photo:2026-08-03:front', 'photo:2026-08-03:side']) })
+    const photoOpts = opts({ localPhotoKeys: new Set(['photo:2026-11-16:front', 'photo:2026-11-16:side']) })
     const once = mergeState(local, incoming, photoOpts)
     const twice = mergeState(once.next, incoming, photoOpts)
     expect(twice.next).toEqual(once.next)

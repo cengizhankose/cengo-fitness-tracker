@@ -1,5 +1,5 @@
 import { delMany, get, getMany, keys, set, setMany } from 'idb-keyval'
-import { SCHEMA_VERSION, STORAGE_KEY, pickPersisted, useStore } from '@/store'
+import { SCHEMA_VERSION, STORAGE_KEY, migrateState, pickPersisted, useStore } from '@/store'
 import type { PersistedState } from '@/store'
 import { MAX_FILE_BYTES, decodePhoto, formatBytes, newStageToken } from './format'
 import type { DecodedBackup, ImportError, Result } from './format'
@@ -152,12 +152,10 @@ export interface ImportPreview {
 export async function previewImport(
   decoded: DecodedBackup,
   mode: ImportMode,
-  includeSettings: boolean,
 ): Promise<ImportPreview> {
   const existing = await localPhotoKeys()
   const { next, report } = mergeState(pickPersisted(useStore.getState()), decoded.state, {
     mode,
-    includeSettings,
     localPhotoKeys: existing,
     filePhotoKeys: new Set(decoded.photos.keys()),
     stageToken: 'preview',
@@ -179,7 +177,11 @@ export async function restoreSnapshot(snapshot: RollbackSnapshot): Promise<void>
   if (restore.length > 0) await setMany(restore)
   if (snapshot.deleteOnRestore.length > 0) await delMany(snapshot.deleteOnRestore)
 
-  useStore.setState(snapshot.state, false)
+  // A rollback point written by an older build holds an older state shape; bring it to the
+  // current one exactly as a reload of its envelope would. A dropped session cursor must clear
+  // the live one too, hence the explicit default.
+  const state = migrateState(snapshot.state, snapshot.state._schemaVersion ?? 1)
+  useStore.setState({ activeSession: undefined, ...state }, false)
   if (snapshot.envelope === null) localStorage.removeItem(STORAGE_KEY)
   else localStorage.setItem(STORAGE_KEY, snapshot.envelope)
 }
@@ -253,8 +255,6 @@ function emptyReport(): MergeReport {
     idConflicts: [],
     strippedPhotoRefs: [],
     photoWrites: [],
-    settings: 'kept-local',
-    benchmark: 'none',
   }
 }
 
@@ -272,7 +272,6 @@ function emptyReport(): MergeReport {
 export async function applyBackup(
   decoded: DecodedBackup,
   mode: ImportMode,
-  includeSettings: boolean,
   now: Date = new Date(),
 ): Promise<ImportOutcome> {
   let snapshot: RollbackSnapshot | undefined
@@ -284,7 +283,6 @@ export async function applyBackup(
     const runMerge = (stageToken: string) =>
       mergeState(before, decoded.state, {
         mode,
-        includeSettings,
         localPhotoKeys: existing,
         filePhotoKeys,
         stageToken,

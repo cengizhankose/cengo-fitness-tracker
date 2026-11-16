@@ -5,10 +5,19 @@ import type { PersistedState } from '@/store'
 import { buildBackup } from './export'
 import { MAX_FILE_BYTES, blobToBase64, decodePhoto } from './format'
 import { applyBackup, readBackupFile } from './import'
-import { EMPTY_STATE, bytesOf, fakePhoto, populatedState, resetStore } from '@/test/fixtures'
+import {
+  EMPTY_STATE,
+  bytesOf,
+  fakePhoto,
+  legacyBackupDoc,
+  legacyState,
+  populatedState,
+  resetStore,
+  toFile,
+} from '@/test/fixtures'
 
-const FRONT = 'photo:2026-08-03:front'
-const SIDE = 'photo:2026-08-03:side'
+const FRONT = 'photo:2026-11-16:front'
+const SIDE = 'photo:2026-11-16:side'
 
 async function backupFile(): Promise<File> {
   const built = await buildBackup(new Date('2026-08-08T13:42:11.284Z'))
@@ -79,11 +88,11 @@ describe('export → import round trip', () => {
       ...populatedState(),
       activeSession: {
         id: 'session-1',
-        date: '2026-08-03',
-        dayName: 'Monday',
+        date: '2026-11-16',
+        planSessionId: 'upper-a',
         exerciseNames: ['Incline Dumbbell Press', 'Lat Pulldown'],
         currentIndex: 1,
-        startedAt: '2026-08-03T18:00:00.000Z',
+        startedAt: '2026-11-16T18:00:00.000Z',
       },
     }
     resetStore(original)
@@ -105,13 +114,13 @@ describe('export → import round trip', () => {
     expect(read.value.photos.size).toBe(2)
     expect(read.value.counts).toEqual({
       checklist: 2,
-      checkIns: 1,
-      strength: 1,
+      checkIns: 2,
+      strength: 2,
       run: 1,
       photos: 2,
     })
 
-    const outcome = await applyBackup(read.value, 'replace', true)
+    const outcome = await applyBackup(read.value, 'replace')
     expect(outcome.ok).toBe(true)
 
     const restored = pickPersisted(useStore.getState())
@@ -121,9 +130,25 @@ describe('export → import round trip', () => {
       version: SCHEMA_VERSION,
     })
 
-    const checkIn = restored.checkIns['2026-08-03']
-    expect(checkIn?.frontPhotoKey).toMatch(/^photo:2026-08-03:front#[0-9a-z]+-\d+$/)
-    expect(checkIn?.sidePhotoKey).toMatch(/^photo:2026-08-03:side#[0-9a-z]+-\d+$/)
+    // The v3 record fields survive the trip explicitly, not just via the deep equality above.
+    const s2 = restored.strengthLog.find((e) => e.id === 's2')
+    expect(s2?.sets.map((st) => [st.id, st.kind])).toEqual([
+      ['set-1', 'warmup'],
+      ['set-2', 'working'],
+    ])
+    expect(s2?.sessionId).toBe('session-1')
+    expect(s2?.updatedAt).toBe('2026-11-16T07:25:00.000Z')
+    expect(restored.checklist['2026-11-16']?.autoWorkout).toBe(true)
+    expect(restored.checklist['2026-11-15']?.items).toEqual({
+      completedWorkout: true,
+      noAlcohol: true,
+      sleep75Plus: false,
+    })
+    expect(restored.activeSession).toEqual(original.activeSession)
+
+    const checkIn = restored.checkIns['2026-11-16']
+    expect(checkIn?.frontPhotoKey).toMatch(/^photo:2026-11-16:front#[0-9a-z]+-\d+$/)
+    expect(checkIn?.sidePhotoKey).toMatch(/^photo:2026-11-16:side#[0-9a-z]+-\d+$/)
     expect(checkIn?.frontPhotoKey).not.toBe(checkIn?.sidePhotoKey)
     expect(await bytesOf((await get<Blob>(checkIn?.frontPhotoKey ?? '')) as Blob)).toEqual(
       await bytesOf(front),
@@ -141,7 +166,7 @@ describe('export → import round trip', () => {
     if (!read.ok) return
     expect(read.value.photos.size).toBe(0)
 
-    const outcome = await applyBackup(read.value, 'replace', true)
+    const outcome = await applyBackup(read.value, 'replace')
     expect(outcome.ok).toBe(true)
     expect(pickPersisted(useStore.getState())).toEqual(EMPTY_STATE)
   })
@@ -158,21 +183,21 @@ describe('export → import round trip', () => {
       ...exported,
       runLog: [
         ...exported.runLog,
-        { id: 'r2', date: '2026-08-06', distanceKm: 12, createdAt: '2026-08-06T06:30:00.000Z' },
+        { id: 'r2', date: '2026-11-19', distanceKm: 12, createdAt: '2026-11-19T06:30:00.000Z' },
       ],
     })
 
     const read = await readBackupFile(file)
     expect(read.ok).toBe(true)
     if (!read.ok) return
-    const outcome = await applyBackup(read.value, 'merge', false)
+    const outcome = await applyBackup(read.value, 'merge')
     expect(outcome.ok).toBe(true)
 
     expect(useStore.getState().runLog.map((e) => e.id)).toEqual(['r2', 'r1'])
     // Local blobs already existed, so nothing needed staging.
     if (!outcome.ok) return
     expect(outcome.report.photoWrites).toEqual([])
-    expect(useStore.getState().checkIns['2026-08-03']?.frontPhotoKey).toBe(FRONT)
+    expect(useStore.getState().checkIns['2026-11-16']?.frontPhotoKey).toBe(FRONT)
   })
 
   it('rejects a backup whose photo does not decode, rather than dropping it', async () => {
@@ -195,5 +220,63 @@ describe('export → import round trip', () => {
     if (read.ok) return
     expect(read.error.code).toBe('E_INVALID')
     expect(pickPersisted(useStore.getState())).toEqual(before)
+  })
+})
+
+describe('importing a backup written by the v2 build', () => {
+  const liveSession = {
+    id: 'session-live',
+    date: '2026-11-16',
+    planSessionId: 'upper-a',
+    exerciseNames: ['Bench Press', 'Chest Supported Row'],
+    currentIndex: 1,
+    startedAt: '2026-11-16T07:00:00.000Z',
+  }
+
+  it('reads and merges the remaining slices, ignoring the retired ones', async () => {
+    const local: PersistedState = { ...populatedState(), activeSession: liveSession }
+    resetStore(local)
+    await set(FRONT, fakePhoto(1, 512))
+    await set(SIDE, fakePhoto(2, 512))
+
+    const read = await readBackupFile(toFile(legacyBackupDoc(2)))
+    expect(read.ok).toBe(true)
+    if (!read.ok) return
+    expect(read.value.schemaVersion).toBe(SCHEMA_VERSION)
+
+    const outcome = await applyBackup(read.value, 'merge')
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.report.removed).toBe(0)
+
+    const legacy = legacyState(2)
+    const live = useStore.getState()
+    expect(live.checklist).toEqual({ ...local.checklist, ...(legacy['checklist'] as object) })
+    expect(live.checkIns).toEqual({ ...local.checkIns, ...(legacy['checkIns'] as object) })
+    expect(live.strengthLog.map((e) => e.id).sort()).toEqual(['legacy-s1', 's1', 's2'])
+    expect(live.runLog.map((e) => e.id).sort()).toEqual(['legacy-r1', 'r1'])
+    expect(live.settings).toEqual({})
+    expect(live._schemaVersion).toBe(SCHEMA_VERSION)
+    expect('benchmark' in live).toBe(false)
+    expect('marathonStatus' in live).toBe(false)
+    expect(live.activeSession).toEqual(liveSession)
+  })
+
+  it('a replace import leaves no activeSession behind', async () => {
+    resetStore({ ...populatedState(), activeSession: liveSession })
+
+    const read = await readBackupFile(toFile(legacyBackupDoc(2)))
+    expect(read.ok).toBe(true)
+    if (!read.ok) return
+    const outcome = await applyBackup(read.value, 'replace')
+    expect(outcome.ok).toBe(true)
+
+    const live = useStore.getState()
+    expect(live.activeSession).toBeUndefined()
+    const legacy = legacyState(2)
+    expect(live.checklist).toEqual(legacy['checklist'])
+    expect(live.runLog).toEqual(legacy['runLog'])
+    expect('benchmark' in live).toBe(false)
+    expect('marathonStatus' in live).toBe(false)
   })
 })

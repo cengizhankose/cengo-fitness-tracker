@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { entries, set } from 'idb-keyval'
-import { STORAGE_KEY, useStore } from '@/store'
+import { SCHEMA_VERSION, STORAGE_KEY, useStore } from '@/store'
 import { readBackupFile } from './import'
 import { validateBackup } from './validate'
 import {
@@ -16,6 +16,8 @@ import {
   backupDoc,
   fakePhoto,
   photoEntry,
+  legacyBackupDoc,
+  legacyState,
   populatedState,
   resetStore,
   toFile,
@@ -58,9 +60,10 @@ describe('validateBackup', () => {
     expect(codeOf(backupDoc({ formatVersion: 2.5 }))).toBe('E_FORMAT_UNSUPPORTED')
   })
 
-  it('rejects a mismatched state schema version', () => {
-    expect(codeOf(backupDoc({ schemaVersion: 3 }))).toBe('E_SCHEMA_MISMATCH')
-    expect(codeOf(backupDoc({ schemaVersion: 0 }))).toBe('E_SCHEMA_MISMATCH')
+  it('rejects a schema version outside 1..3 or not an integer', () => {
+    for (const v of [0, 4, 2.5, '3']) {
+      expect(codeOf(backupDoc({ schemaVersion: v }))).toBe('E_SCHEMA_MISMATCH')
+    }
   })
 
   // derive.ts:244 and LogScreen.tsx:137 call createdAt.localeCompare during render.
@@ -90,13 +93,6 @@ describe('validateBackup', () => {
     const doc = backupDoc({ state: { ...state, strengthLog: [{ ...entry, sets: 'lots' }] } })
     expect(codeOf(doc)).toBe('E_INVALID')
     expect(firstIssuePath(doc)).toBe('state.strengthLog[0].sets')
-  })
-
-  it('rejects an unparseable programStartDate', () => {
-    const state = populatedState()
-    const doc = backupDoc({ state: { ...state, settings: { programStartDate: 'garbage' } } })
-    expect(codeOf(doc)).toBe('E_INVALID')
-    expect(firstIssuePath(doc)).toBe('state.settings.programStartDate')
   })
 
   it('rejects a calendar-invalid date that passes the regex', () => {
@@ -164,17 +160,21 @@ describe('validateBackup', () => {
     expect(codeOf(doc)).toBe('E_INVALID')
   })
 
-  it('drops unknown checklist item keys instead of failing', () => {
+  it('keeps legacy checklist keys and drops truly unknown ones instead of failing', () => {
     const state = populatedState()
     const doc = backupDoc({ state: { ...state, checklist: { '2026-08-03': {
       date: '2026-08-03',
-      items: { completedWorkout: true, ateCake: true },
+      items: { completedWorkout: true, noAlcohol: true, steps10000Plus: false, ateCake: true },
       updatedAt: '2026-08-03T18:00:00.000Z',
     } } } })
     const result = validateBackup(doc)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.value.state.checklist['2026-08-03']?.items).toEqual({ completedWorkout: true })
+    expect(result.value.state.checklist['2026-08-03']?.items).toEqual({
+      completedWorkout: true,
+      noAlcohol: true,
+      steps10000Plus: false,
+    })
   })
 
   it('reports at most five issues', () => {
@@ -189,148 +189,181 @@ describe('validateBackup', () => {
   })
 })
 
-describe('marathonStatus — additive, backward compatible (Slice 9)', () => {
-  it('a backup without state.marathonStatus validates clean -> {}, no issue reported', () => {
-    const state = populatedState()
-    const withoutKey = { ...state } as Record<string, unknown>
-    delete withoutKey['marathonStatus']
-    const doc = backupDoc({ state: withoutKey })
+describe('older schemas import onto the v3 shape', () => {
+  for (const version of [1, 2] as const) {
+    it(`accepts a v${version} backup and keeps its user data`, () => {
+      const result = validateBackup(legacyBackupDoc(version))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const legacy = legacyState(version)
+      const state = result.value.state
+      expect(result.value.schemaVersion).toBe(SCHEMA_VERSION)
+      expect(state._schemaVersion).toBe(SCHEMA_VERSION)
+      expect(state.checklist).toEqual(legacy['checklist'])
+      expect(state.checkIns).toEqual(legacy['checkIns'])
+      expect(state.strengthLog).toEqual(legacy['strengthLog'])
+      expect(state.runLog).toEqual(legacy['runLog'])
+    })
+  }
+
+  it('drops the retired slices and the old-shape activeSession of a v2 file', () => {
+    const result = validateBackup(legacyBackupDoc(2))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const state = result.value.state as unknown as Record<string, unknown>
+    expect('benchmark' in state).toBe(false)
+    expect('marathonStatus' in state).toBe(false)
+    expect(state['activeSession']).toBeUndefined()
+  })
+
+  it('does not reject a v2 file whose retired slices are malformed', () => {
+    const doc = legacyBackupDoc(2)
+    doc['state'] = {
+      ...legacyState(2),
+      benchmark: { date: 'garbage', timeSec: 'slow' },
+      marathonStatus: { 'not-a-date': null, __junk: 7 },
+    }
+    expect(codeOf(doc)).toBe('OK')
+    doc['state'] = { ...legacyState(2), benchmark: 'nope', marathonStatus: null }
+    expect(codeOf(doc)).toBe('OK')
+  })
+
+  it('keeps legacy checklist keys of a v1 file and drops a truly unknown key', () => {
+    const legacy = legacyState(1)
+    const doc = legacyBackupDoc(1)
+    doc['state'] = {
+      ...legacy,
+      checklist: {
+        '2026-08-03': {
+          date: '2026-08-03',
+          items: { completedWorkout: true, completedStretching: true, hitCalorieTarget: false, ateCake: true },
+          updatedAt: '2026-08-03T18:00:00.000Z',
+        },
+      },
+    }
     const result = validateBackup(doc)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.value.state.marathonStatus).toEqual({})
-  })
-
-  it('rejects an explicit null — only undefined/missing is the backward-compatible legacy case', () => {
-    const state = populatedState()
-    const doc = backupDoc({ state: { ...state, marathonStatus: null } })
-    const result = validateBackup(doc)
-    expect(result.ok).toBe(false)
-    if (result.ok) return
-    expect(result.error.code).toBe('E_INVALID')
-    expect(result.error.issues?.[0]?.path).toBe('state.marathonStatus')
-  })
-
-  it('accepts a well-formed entry', () => {
-    const state = populatedState()
-    const doc = backupDoc({
-      state: {
-        ...state,
-        marathonStatus: {
-          '2026-09-02': {
-            date: '2026-09-02',
-            status: 'completed',
-            notes: 'felt strong',
-            updatedAt: '2026-09-02T19:00:00.000Z',
-          },
-        },
-      },
+    expect(result.value.state.checklist['2026-08-03']?.items).toEqual({
+      completedWorkout: true,
+      completedStretching: true,
+      hitCalorieTarget: false,
     })
-    const result = validateBackup(doc)
+  })
+})
+
+describe('settings', () => {
+  it('ignores the old programStartDate — validated settings are always {}', () => {
+    const result = validateBackup(legacyBackupDoc(2))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.value.state.marathonStatus['2026-09-02']).toEqual({
-      date: '2026-09-02',
-      status: 'completed',
-      notes: 'felt strong',
-      updatedAt: '2026-09-02T19:00:00.000Z',
+    expect(result.value.state.settings).toEqual({})
+
+    // Even a garbage value inside settings is ignored, not rejected.
+    const garbage = validateBackup(
+      backupDoc({ state: { ...populatedState(), settings: { programStartDate: 'garbage' } } }),
+    )
+    expect(garbage.ok).toBe(true)
+    if (!garbage.ok) return
+    expect(garbage.value.state.settings).toEqual({})
+  })
+
+  it('accepts a state without settings', () => {
+    const state = populatedState() as unknown as Record<string, unknown>
+    delete state['settings']
+    const result = validateBackup(backupDoc({ state }))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state.settings).toEqual({})
+  })
+
+  it('rejects non-object settings', () => {
+    for (const settings of ['nope', 7, [], null]) {
+      const doc = backupDoc({ state: { ...populatedState(), settings } })
+      expect(codeOf(doc)).toBe('E_INVALID')
+      expect(firstIssuePath(doc)).toBe('state.settings')
+    }
+  })
+})
+
+describe('v3 activeSession', () => {
+  const session = {
+    id: 'session-2',
+    date: '2026-11-16',
+    planSessionId: 'upper-a',
+    exerciseNames: ['Bench Press', 'Chest Supported Row'],
+    currentIndex: 1,
+    startedAt: '2026-11-16T07:00:00.000Z',
+  }
+
+  it('accepts the new shape', () => {
+    const result = validateBackup(
+      backupDoc({ state: { ...populatedState(), activeSession: session } }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state.activeSession).toEqual(session)
+  })
+
+  it('accepts a free session with no exercises yet', () => {
+    const free = { ...session, planSessionId: 'free', exerciseNames: [], currentIndex: 0 }
+    const result = validateBackup(backupDoc({ state: { ...populatedState(), activeSession: free } }))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state.activeSession).toEqual(free)
+  })
+
+  it('rejects a v3 session missing planSessionId', () => {
+    const withoutPlan: Record<string, unknown> = { ...session }
+    delete withoutPlan['planSessionId']
+    const doc = backupDoc({ state: { ...populatedState(), activeSession: withoutPlan } })
+    expect(codeOf(doc)).toBe('E_INVALID')
+    expect(firstIssuePath(doc)).toBe('state.activeSession.planSessionId')
+  })
+})
+
+describe('v3 record fields survive validation', () => {
+  it('preserves set kind/id, entry sessionId/updatedAt, autoWorkout and legacy checklist keys', () => {
+    const result = validateBackup(backupDoc())
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const expected = populatedState()
+    expect(result.value.state).toEqual(expected)
+    const s2 = result.value.state.strengthLog.find((e) => e.id === 's2')
+    expect(s2?.sets.map((s) => [s.id, s.kind])).toEqual([
+      ['set-1', 'warmup'],
+      ['set-2', 'working'],
+    ])
+    expect(s2?.sessionId).toBe('session-1')
+    expect(s2?.updatedAt).toBe('2026-11-16T07:25:00.000Z')
+    expect(result.value.state.checklist['2026-11-16']?.autoWorkout).toBe(true)
+    expect(result.value.state.checklist['2026-11-15']?.items).toEqual({
+      completedWorkout: true,
+      noAlcohol: true,
+      sleep75Plus: false,
     })
   })
 
-  it('rejects the way checklist is: non-object map, bad date key, date !== key', () => {
+  it('rejects an unknown set kind', () => {
     const state = populatedState()
-    expect(codeOf(backupDoc({ state: { ...state, marathonStatus: 'nope' } }))).toBe('E_INVALID')
-    expect(
-      codeOf(
-        backupDoc({
-          state: {
-            ...state,
-            marathonStatus: { 'not-a-date': { date: 'not-a-date', status: 'completed', updatedAt: '2026-09-02T19:00:00.000Z' } },
-          },
-        }),
-      ),
-    ).toBe('E_INVALID')
-    expect(
-      codeOf(
-        backupDoc({
-          state: {
-            ...state,
-            marathonStatus: {
-              '2026-09-02': { date: '2026-09-03', status: 'completed', updatedAt: '2026-09-02T19:00:00.000Z' },
-            },
-          },
-        }),
-      ),
-    ).toBe('E_INVALID')
-  })
-
-  it('rejects a bad status string', () => {
-    const state = populatedState()
+    const entry = state.strengthLog[0]
+    if (!entry) throw new Error('fixture missing')
     const doc = backupDoc({
-      state: {
-        ...state,
-        marathonStatus: {
-          '2026-09-02': { date: '2026-09-02', status: 'done', updatedAt: '2026-09-02T19:00:00.000Z' },
-        },
-      },
+      state: { ...state, strengthLog: [{ ...entry, sets: [{ weightKg: 60, reps: 5, kind: 'drop' }] }] },
     })
     expect(codeOf(doc)).toBe('E_INVALID')
-    expect(firstIssuePath(doc)).toBe('state.marathonStatus["2026-09-02"].status')
+    expect(firstIssuePath(doc)).toBe('state.strengthLog[0].sets[0].kind')
   })
 
-  it('rejects a missing or non-canonical updatedAt', () => {
+  it('rejects a non-canonical strength updatedAt', () => {
     const state = populatedState()
-    expect(
-      codeOf(
-        backupDoc({
-          state: { ...state, marathonStatus: { '2026-09-02': { date: '2026-09-02', status: 'completed' } } },
-        }),
-      ),
-    ).toBe('E_INVALID')
-    expect(
-      codeOf(
-        backupDoc({
-          state: {
-            ...state,
-            marathonStatus: {
-              '2026-09-02': { date: '2026-09-02', status: 'completed', updatedAt: '2026-09-02T19:00:00Z' },
-            },
-          },
-        }),
-      ),
-    ).toBe('E_INVALID')
-  })
-
-  it('rejects a __proto__ key', () => {
-    const state = populatedState()
-    const marathonStatus = JSON.parse(
-      '{"__proto__":{"date":"2026-09-02","status":"completed","updatedAt":"2026-09-02T19:00:00.000Z"}}',
-    ) as Record<string, unknown>
-    expect(codeOf(backupDoc({ state: { ...state, marathonStatus } }))).toBe('E_INVALID')
-  })
-
-  it('caps entries at MAX_MAP_ENTRIES', () => {
-    const state = populatedState()
-    const big = Object.fromEntries(Array.from({ length: MAX_MAP_ENTRIES + 1 }, (_, i) => [`key-${i}`, {}]))
-    expect(codeOf(backupDoc({ state: { ...state, marathonStatus: big } }))).toBe('E_INVALID')
-  })
-
-  it('rejects an oversized notes field', () => {
-    const state = populatedState()
+    const entry = state.strengthLog[0]
+    if (!entry) throw new Error('fixture missing')
     const doc = backupDoc({
-      state: {
-        ...state,
-        marathonStatus: {
-          '2026-09-02': {
-            date: '2026-09-02',
-            status: 'completed',
-            notes: 'x'.repeat(10_001),
-            updatedAt: '2026-09-02T19:00:00.000Z',
-          },
-        },
-      },
+      state: { ...state, strengthLog: [{ ...entry, updatedAt: '2026-11-16T07:25:00Z' }] },
     })
     expect(codeOf(doc)).toBe('E_INVALID')
+    expect(firstIssuePath(doc)).toBe('state.strengthLog[0].updatedAt')
   })
 })
 
@@ -504,7 +537,7 @@ describe('readBackupFile leaves live data untouched', () => {
     ['newer format', backupDoc({ formatVersion: 99 })],
     ['schema mismatch', backupDoc({ schemaVersion: 7 })],
     ['missing createdAt', backupDoc({ state: { ...populatedState(), strengthLog: [
-      { id: 's1', date: '2026-08-03', exerciseName: 'Bench', sets: [] },
+      { id: 's1', date: '2026-11-16', exerciseName: 'Bench', sets: [] },
     ] } })],
   ]
 
@@ -514,7 +547,7 @@ describe('readBackupFile leaves live data untouched', () => {
     const envelope = JSON.stringify({ state: before, version: 1 })
     localStorage.setItem(STORAGE_KEY, envelope)
     const photo = fakePhoto(1)
-    await set('photo:2026-08-03:front', photo)
+    await set('photo:2026-11-16:front', photo)
 
     const file =
       typeof doc === 'string'
@@ -526,6 +559,6 @@ describe('readBackupFile leaves live data untouched', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(envelope)
     expect(useStore.getState().strengthLog).toEqual(before.strengthLog)
     const idb = await entries()
-    expect(idb.map(([k]) => k)).toEqual(['photo:2026-08-03:front'])
+    expect(idb.map(([k]) => k)).toEqual(['photo:2026-11-16:front'])
   })
 })

@@ -1,21 +1,18 @@
 import type { PersistedState } from '@/store'
 import { stagedPhotoKey } from './format'
 import type {
-  BenchmarkResult,
   CheckIn,
   DailyChecklistRecord,
   IsoDate,
   RunLogEntry,
   StrengthLogEntry,
 } from '@/types/userData'
-import type { MarathonStatusRecord } from '@/types/marathon'
 
 export type ImportMode = 'merge' | 'replace'
 
 export interface MergeOptions {
+  /** Replace takes the backup's settings; merge keeps the local ones. */
   mode: ImportMode
-  /** Merge mode only: adopt the backup's programStartDate. Replace always takes it. */
-  includeSettings: boolean
   /** Photo keys already in IndexedDB. */
   localPhotoKeys: ReadonlySet<string>
   /** Photo keys the backup file carries as decodable blobs. */
@@ -36,14 +33,12 @@ export interface MergeReport {
   added: number
   updated: number
   removed: number
-  /** Incoming log entries skipped because an entry with that id already exists locally. */
+  /** Incoming log entries skipped because a differing, not-older local entry has that id. */
   idConflicts: string[]
   /** Photo refs dropped because no blob will exist for them anywhere. */
   strippedPhotoRefs: string[]
   /** Blobs to stage from the backup file, each under a new key. */
   photoWrites: PhotoStage[]
-  settings: 'kept-local' | 'took-incoming'
-  benchmark: 'kept-local' | 'took-incoming' | 'none'
 }
 
 export interface MergeResult {
@@ -76,7 +71,8 @@ function trueCount(rec: DailyChecklistRecord): number {
 /**
  * Record-level newest-wins. `items` has no per-key timestamps, so a per-key union
  * would just mean "true always wins" — resurrecting ticks the user deliberately
- * removed. Ties break toward more completed items, then toward local.
+ * removed. Ties break toward more completed items, then toward local. The winning
+ * record is taken whole, so retired checklist keys inside it survive untouched.
  */
 function mergeChecklistRecord(
   local: DailyChecklistRecord,
@@ -85,14 +81,6 @@ function mergeChecklistRecord(
   if (incoming.updatedAt > local.updatedAt) return incoming
   if (incoming.updatedAt < local.updatedAt) return local
   return trueCount(incoming) > trueCount(local) ? incoming : local
-}
-
-/** Record-level newest-`updatedAt`-wins, tie -> local. Mirrors `mergeChecklistRecord`. */
-function mergeMarathonRecord(
-  local: MarathonStatusRecord,
-  incoming: MarathonStatusRecord,
-): MarathonStatusRecord {
-  return incoming.updatedAt > local.updatedAt ? incoming : local
 }
 
 const CHECKIN_OPTIONAL_FIELDS = [
@@ -107,9 +95,9 @@ const CHECKIN_OPTIONAL_FIELDS = [
 
 /**
  * Field-level sparse merge. CheckIn fields are independent measurements written by
- * two different code paths — ProgressScreen.handleSave writes the four metrics
- * without touching photo keys, attachPhotoRef writes photo keys without touching
- * metrics. Whole-record newest-wins would make those paths destroy each other.
+ * two different code paths — saveCheckIn writes the metrics without touching photo
+ * keys, attachPhotoRef writes photo keys without touching metrics. Whole-record
+ * newest-wins would make those paths destroy each other.
  */
 function mergeCheckIn(
   local: CheckIn,
@@ -154,12 +142,13 @@ function mergeCheckIn(
 }
 
 /**
- * Union by id. Entries are immutable (the store only adds and removes), so there is
- * no updatedAt to arbitrate with and createdAt is a creation stamp, not an edit stamp.
- * An id collision therefore means a weak-fallback-id clash or a hand-edited file —
- * overwriting local with a record of unknown provenance isn't justifiable.
+ * Union by id; merge mode never removes a local entry. On an id collision the copy with the
+ * newer edit stamp (`updatedAt`, else `createdAt`) wins: strength entries are corrected in place
+ * and bump `updatedAt`, so a strictly newer stamp is that record's own later version. Any other
+ * difference (equal or older stamp — a weak-fallback-id clash, a hand-edited file) keeps local,
+ * because overwriting it with a record of unknown provenance isn't justifiable, and is reported.
  */
-function mergeLog<T extends { id: string; createdAt: string }>(
+function mergeLog<T extends { id: string; createdAt: string; updatedAt?: string }>(
   local: T[],
   incoming: T[],
   idConflicts: string[],
@@ -171,22 +160,15 @@ function mergeLog<T extends { id: string; createdAt: string }>(
       byId.set(entry.id, entry)
       continue
     }
-    if (!deepEqual(existing, entry)) idConflicts.push(entry.id)
+    if (deepEqual(existing, entry)) continue
+    const incomingStamp = entry.updatedAt ?? entry.createdAt
+    const localStamp = existing.updatedAt ?? existing.createdAt
+    if (incomingStamp > localStamp) byId.set(entry.id, entry)
+    else idConflicts.push(entry.id)
   }
   return [...byId.values()].sort(
     (a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id),
   )
-}
-
-function mergeBenchmark(
-  local: BenchmarkResult | undefined,
-  incoming: BenchmarkResult | undefined,
-): { value: BenchmarkResult | undefined; outcome: MergeReport['benchmark'] } {
-  if (!incoming) return { value: local, outcome: local ? 'kept-local' : 'none' }
-  if (!local) return { value: incoming, outcome: 'took-incoming' }
-  return incoming.createdAt > local.createdAt
-    ? { value: incoming, outcome: 'took-incoming' }
-    : { value: local, outcome: 'kept-local' }
 }
 
 /** Stable identity for every persisted record, used to diff local vs. next. */
@@ -196,9 +178,7 @@ function recordEntries(state: PersistedState): Array<[string, unknown]> {
   for (const [k, v] of Object.entries(state.checkIns)) out.push([`checkIn:${k}`, v])
   for (const e of state.strengthLog) out.push([`strength:${e.id}`, e])
   for (const e of state.runLog) out.push([`run:${e.id}`, e])
-  if (state.benchmark) out.push(['benchmark', state.benchmark])
   if (state.activeSession) out.push(['activeSession', state.activeSession])
-  for (const [k, v] of Object.entries(state.marathonStatus)) out.push([`marathon:${k}`, v])
   return out
 }
 
@@ -298,18 +278,12 @@ export function mergeState(
   let checkIns: Record<IsoDate, CheckIn>
   let strengthLog: StrengthLogEntry[]
   let runLog: RunLogEntry[]
-  let benchmark: BenchmarkResult | undefined
-  let benchmarkOutcome: MergeReport['benchmark']
-  let marathonStatus: Record<IsoDate, MarathonStatusRecord>
 
   if (opts.mode === 'replace') {
     checklist = { ...incoming.checklist }
     checkIns = { ...incoming.checkIns }
     strengthLog = [...incoming.strengthLog]
     runLog = [...incoming.runLog]
-    benchmark = incoming.benchmark
-    benchmarkOutcome = incoming.benchmark ? 'took-incoming' : 'none'
-    marathonStatus = { ...incoming.marathonStatus }
     for (const date of Object.keys(checkIns)) {
       photoSources.set(date, { front: 'incoming', side: 'incoming' })
     }
@@ -338,31 +312,18 @@ export function mergeState(
 
     strengthLog = mergeLog(local.strengthLog, incoming.strengthLog, idConflicts)
     runLog = mergeLog(local.runLog, incoming.runLog, idConflicts)
-    const b = mergeBenchmark(local.benchmark, incoming.benchmark)
-    benchmark = b.value
-    benchmarkOutcome = b.outcome
-
-    marathonStatus = { ...local.marathonStatus }
-    for (const [date, rec] of Object.entries(incoming.marathonStatus)) {
-      const existing = marathonStatus[date]
-      marathonStatus[date] = existing ? mergeMarathonRecord(existing, rec) : rec
-    }
   }
 
   const resolved = resolvePhotos(checkIns, photoSources, opts)
 
-  const takeSettings = opts.mode === 'replace' || opts.includeSettings
-  const activeSession =
-    opts.mode === 'replace' ? incoming.activeSession : local.activeSession ?? incoming.activeSession
+  const replace = opts.mode === 'replace'
   const next: PersistedState = {
-    settings: takeSettings ? incoming.settings : local.settings,
+    settings: replace ? incoming.settings : local.settings,
     checklist,
     checkIns: resolved.checkIns,
     strengthLog,
     runLog,
-    benchmark,
-    activeSession,
-    marathonStatus,
+    activeSession: replace ? incoming.activeSession : local.activeSession ?? incoming.activeSession,
     _schemaVersion: local._schemaVersion,
   }
 
@@ -374,8 +335,6 @@ export function mergeState(
       idConflicts,
       strippedPhotoRefs: resolved.stripped,
       photoWrites: resolved.photoWrites,
-      settings: takeSettings ? 'took-incoming' : 'kept-local',
-      benchmark: benchmarkOutcome,
     },
   }
 }

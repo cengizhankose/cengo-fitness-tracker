@@ -6,7 +6,19 @@ export type IsoDate = string
 export type IsoTimestamp = string
 
 // ---- Daily checklist ----
-export type DailyChecklist = Partial<Record<ChecklistKey, boolean>>
+/**
+ * Keys of the retired checklist. Records written before plan v2 may still carry them; they
+ * are kept verbatim when a record is round-tripped but never rendered or counted.
+ */
+export type LegacyChecklistKey =
+  | 'completedMorningMobility'
+  | 'completedStretching'
+  | 'hitCalorieTarget'
+  | 'steps10000Plus'
+  | 'sleep75Plus'
+  | 'noAlcohol'
+
+export type DailyChecklist = Partial<Record<ChecklistKey | LegacyChecklistKey, boolean>>
 export interface DailyChecklistRecord {
   date: IsoDate
   items: DailyChecklist
@@ -15,9 +27,9 @@ export interface DailyChecklistRecord {
   updatedAt: IsoTimestamp
 }
 
-// ---- Weekly check-in (measurements + photo refs) ----
+// ---- Check-in (measurements + photo refs) ----
 export interface CheckIn {
-  date: IsoDate // the Monday it belongs to (key)
+  date: IsoDate // any calendar day (key)
   weightKg?: number
   waistCm?: number
   chestCm?: number
@@ -38,7 +50,7 @@ export interface StrengthSet {
   weightKg: number
   reps: number
   rpe?: number
-  kind?: SetKind // absent => 'working' (see setKind() in lib/derive)
+  kind?: SetKind // absent => 'working' (see setKind() in lib/exerciseStats)
 }
 export interface StrengthLogEntry {
   id: string
@@ -56,12 +68,13 @@ export interface StrengthLogEntry {
 /**
  * Cursor only — the sets themselves are written straight to `strengthLog`, so a
  * half-finished session can never lose data. `exerciseNames` is snapshotted at
- * start so an edit to plan.json mid-session can't shift the cursor.
+ * start (and only ever appended to) so a plan edit mid-session can't shift the cursor.
  */
 export interface ActiveSession {
   id: string
   date: IsoDate
-  dayName: DayName
+  /** A plan `SessionId`, or 'free' for a session built exercise by exercise. */
+  planSessionId: string
   exerciseNames: string[]
   currentIndex: number
   startedAt: IsoTimestamp
@@ -82,18 +95,7 @@ export interface RunLogEntry {
   createdAt: IsoTimestamp
 }
 
-// ---- Benchmark (one-shot 5K) ----
-export interface BenchmarkResult {
-  date: IsoDate
-  timeSec: number
-  averagePace?: string
-  averageHeartRate?: number
-  maxHeartRate?: number
-  notes?: string
-  createdAt: IsoTimestamp
-}
-
 // ---- Settings ----
-export interface Settings {
-  programStartDate: IsoDate // anchors marathon week 1
-}
+/** No user-editable settings yet (the plan start is a constant in plan data). The slice stays
+ *  so persisted envelopes and backups keep their shape. */
+export type Settings = Record<string, never>

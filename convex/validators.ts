@@ -1,25 +1,32 @@
-// Convex value validators mirroring src/types/userData.ts and src/types/marathon.ts.
-// Kept in one place so every table/function derives the same shape — no parallel models.
+// Convex value validators mirroring the client types (src/types/userData.ts, src/types/plan.ts)
+// plus the shapes of server tables the client no longer syncs. Kept in one place so every
+// table/function derives the same shape — no parallel models.
 import { v } from 'convex/values'
 
-/** Mirrors src/types/plan.ts ChecklistKey. */
+/**
+ * Every checklist key a stored record may carry: the current ChecklistKey of src/types/plan.ts
+ * plus the retired LegacyChecklistKey of src/types/userData.ts. Additive only — existing rows
+ * still hold the retired keys.
+ */
 export const checklistKey = v.union(
   v.literal('completedWorkout'),
+  v.literal('hitProteinTarget'),
+  v.literal('inBedByMidnight'),
   v.literal('completedMorningMobility'),
   v.literal('completedStretching'),
-  v.literal('hitProteinTarget'),
   v.literal('hitCalorieTarget'),
   v.literal('steps10000Plus'),
   v.literal('sleep75Plus'),
   v.literal('noAlcohol'),
 )
 
-/** Mirrors src/types/userData.ts DailyChecklist (Partial<Record<ChecklistKey, boolean>>). */
+/** Mirrors src/types/userData.ts DailyChecklist. */
 export const checklistItems = v.object({
   completedWorkout: v.optional(v.boolean()),
+  hitProteinTarget: v.optional(v.boolean()),
+  inBedByMidnight: v.optional(v.boolean()),
   completedMorningMobility: v.optional(v.boolean()),
   completedStretching: v.optional(v.boolean()),
-  hitProteinTarget: v.optional(v.boolean()),
   hitCalorieTarget: v.optional(v.boolean()),
   steps10000Plus: v.optional(v.boolean()),
   sleep75Plus: v.optional(v.boolean()),
@@ -49,7 +56,7 @@ export const strengthSet = v.object({
   kind: v.optional(setKind),
 })
 
-/** Mirrors src/types/marathon.ts MarathonStatus. */
+/** Server-only table shape (the client no longer syncs it; rows are retained). */
 export const marathonStatus = v.union(v.literal('completed'), v.literal('skipped'))
 
 /** Constant natural key for the singleton benchmark row. */

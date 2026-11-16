@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { SLICE_NAMES } from './types'
 
 const query = vi.fn().mockResolvedValue([])
 const mutation = vi.fn().mockResolvedValue(undefined)
@@ -59,6 +60,18 @@ describe('makeHttpSyncClient', () => {
     const client = makeHttpSyncClient('http://127.0.0.1:3220', 'the-secret')
     await client.syncStateCursor('checklist')
     expect(query).toHaveBeenCalledWith(expect.anything(), { slice: 'checklist', syncSecret: 'the-secret' })
+  })
+
+  it('routes pull and push for each of the four synced slices', async () => {
+    const client = makeHttpSyncClient('http://127.0.0.1:3220', 'the-secret')
+    expect(SLICE_NAMES).toEqual(['checklist', 'checkIns', 'strengthLog', 'runLog'])
+    for (const slice of SLICE_NAMES) {
+      await client.pull(slice, undefined)
+      await client.push(slice, [])
+    }
+    expect(query).toHaveBeenCalledTimes(4)
+    expect(mutation).toHaveBeenCalledTimes(4)
+    for (const call of [...query.mock.calls, ...mutation.mock.calls]) expect(call[0]).toBeDefined()
   })
 
   it('propagates a rejection from the server (e.g. a wrong-secret Unauthorized throw)', async () => {

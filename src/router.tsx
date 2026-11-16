@@ -1,12 +1,14 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { App } from '@/App'
-import { TodayScreen } from '@/screens/TodayScreen'
-import { WeeklyScreen } from '@/screens/WeeklyScreen'
-import { LogScreen } from '@/screens/LogScreen'
-import { ActivitiesScreen } from '@/screens/ActivitiesScreen'
-import { SessionScreen } from '@/screens/SessionScreen'
-import { SettingsScreen } from '@/screens/SettingsScreen'
 import { Splash } from '@/components/Splash'
+import { TodayScreen } from '@/screens/TodayScreen'
+import { PlanScreen } from '@/screens/PlanScreen'
+import { NutritionScreen } from '@/screens/NutritionScreen'
+import { SessionScreen } from '@/screens/SessionScreen'
+import { ExercisesScreen } from '@/screens/ExercisesScreen'
+import { ExerciseDetailScreen } from '@/screens/ExerciseDetailScreen'
+import { HistoryScreen } from '@/screens/HistoryScreen'
+import { SettingsScreen } from '@/screens/SettingsScreen'
 
 export const router = createBrowserRouter([
   {
@@ -15,9 +17,14 @@ export const router = createBrowserRouter([
     HydrateFallback: Splash,
     children: [
       { index: true, element: <TodayScreen /> },
-      { path: 'weekly', element: <WeeklyScreen /> },
-      // Progress pulls in recharts — lazy-split so it stays out of the
-      // initial bundle (keeps the after-workout Today/Log screens fast).
+      { path: 'plan', element: <PlanScreen /> },
+      { path: 'nutrition', element: <NutritionScreen /> },
+      { path: 'session', element: <SessionScreen /> },
+      { path: 'exercises', element: <ExercisesScreen /> },
+      { path: 'exercises/:name', element: <ExerciseDetailScreen /> },
+      { path: 'history', element: <HistoryScreen /> },
+      // Progress is the only screen that pulls in recharts — lazy-split so it stays out
+      // of the initial bundle.
       {
         path: 'progress',
         lazy: async () => {
@@ -25,10 +32,8 @@ export const router = createBrowserRouter([
           return { Component: ProgressScreen }
         },
       },
-      { path: 'log', element: <LogScreen /> },
-      { path: 'activities', element: <ActivitiesScreen /> },
-      { path: 'session', element: <SessionScreen /> },
       { path: 'settings', element: <SettingsScreen /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ])

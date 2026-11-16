@@ -5,10 +5,8 @@ import {
   strengthEntryToWire,
   runEntryToWire,
   runEntryFromWire,
-  benchmarkToWire,
-  benchmarkFromWire,
 } from './adapters'
-import type { CheckIn, RunLogEntry, StrengthLogEntry, BenchmarkResult } from '@/types/userData'
+import type { CheckIn, RunLogEntry, StrengthLogEntry } from '@/types/userData'
 
 describe('effectiveUpdatedAt', () => {
   it('prefers updatedAt when present', () => {
@@ -80,24 +78,6 @@ describe('runEntryToWire / runEntryFromWire', () => {
   it('round-trips back to a plain RunLogEntry without an updatedAt field', () => {
     const back = runEntryFromWire(runEntryToWire(entry))
     expect(back).toEqual(entry)
-    expect(back).not.toHaveProperty('updatedAt')
-  })
-})
-
-describe('benchmarkToWire / benchmarkFromWire', () => {
-  const benchmark: BenchmarkResult = {
-    date: '2026-01-01',
-    timeSec: 1200,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  }
-
-  it('stamps updatedAt = createdAt on the way out', () => {
-    expect(benchmarkToWire(benchmark).updatedAt).toBe('2026-01-01T00:00:00.000Z')
-  })
-
-  it('round-trips back to a plain BenchmarkResult without an updatedAt field', () => {
-    const back = benchmarkFromWire(benchmarkToWire(benchmark))
-    expect(back).toEqual(benchmark)
     expect(back).not.toHaveProperty('updatedAt')
   })
 })

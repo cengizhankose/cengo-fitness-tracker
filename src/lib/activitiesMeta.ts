@@ -1,8 +1,8 @@
 import { Footprints, Bike, Waves, Dumbbell, Activity as ActivityIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { SportGroup, PlanAdherence } from '@/types/activities'
-import type { BadgeTone } from '@/components/Badge'
+import type { SportGroup } from '@/types/activities'
 
+/** Icon per Garmin sport group. */
 export const SPORT_ICON: Record<SportGroup, LucideIcon> = {
   run: Footprints,
   bike: Bike,
@@ -11,6 +11,7 @@ export const SPORT_ICON: Record<SportGroup, LucideIcon> = {
   other: ActivityIcon,
 }
 
+/** Turkish label per Garmin sport group. */
 export const SPORT_LABEL: Record<SportGroup, string> = {
   run: 'Koşu',
   bike: 'Bisiklet',
@@ -19,24 +20,11 @@ export const SPORT_LABEL: Record<SportGroup, string> = {
   other: 'Diğer',
 }
 
+/** Accent color (CSS custom property) per Garmin sport group. */
 export const SPORT_COLOR: Record<SportGroup, string> = {
   run: 'var(--color-run)',
   bike: 'var(--color-football)',
   swim: 'var(--color-active)',
   strength: 'var(--color-volt)',
   other: 'var(--color-text-muted)',
-}
-
-export const PLAN_ADHERENCE_TONE: Record<PlanAdherence, BadgeTone> = {
-  on_plan: 'success',
-  substitution: 'run',
-  extra: 'active',
-  unplanned: 'heat',
-}
-
-export const PLAN_ADHERENCE_LABEL: Record<PlanAdherence, string> = {
-  on_plan: 'Plana Uygun',
-  substitution: 'İkame',
-  extra: 'Ek Antrenman',
-  unplanned: 'Plansız',
 }

@@ -9,7 +9,7 @@ import type { SyncedSlices } from './types'
  * backup import path already relies on (mergeState) — no parallel merge logic. Only the slices
  * present in `pulled` are compared; anything omitted is treated as "nothing new for this slice"
  * (mergeState's `merge` mode never removes a local record that has no incoming counterpart).
- * Settings and activeSession are never touched — they aren't synced.
+ * Settings and activeSession are never touched — they aren't synced, and merge mode keeps local.
  */
 export async function mergePulled(
   local: PersistedState,
@@ -21,8 +21,7 @@ export async function mergePulled(
     checkIns: pulled.checkIns ?? {},
     strengthLog: pulled.strengthLog ?? [],
     runLog: pulled.runLog ?? [],
-    marathonStatus: pulled.marathonStatus ?? {},
-    benchmark: pulled.benchmark,
+    activeSession: undefined,
   }
 
   const allKeys = (await keys()) as unknown[]
@@ -32,7 +31,6 @@ export async function mergePulled(
 
   const { next } = mergeState(local, incoming, {
     mode: 'merge',
-    includeSettings: false,
     localPhotoKeys,
     filePhotoKeys: new Set(), // pulled checkIns never carry photo keys (local-only)
     stageToken: newStageToken(),

@@ -1,20 +1,24 @@
-import type { WorkoutType } from '@/types/plan'
-import type { BadgeTone } from '@/components/Badge'
+import { Dumbbell, Footprints, Trophy } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { BlockType } from '@/types/plan'
 
-export const TYPE_TONE: Record<WorkoutType, BadgeTone> = {
-  strength: 'volt',
-  run: 'run',
-  football: 'football',
-}
-
-export const TYPE_COLOR: Record<WorkoutType, string> = {
+/** Accent color (CSS custom property) per plan block type. */
+export const BLOCK_COLOR: Record<BlockType, string> = {
   strength: 'var(--color-volt)',
   run: 'var(--color-run)',
   football: 'var(--color-football)',
 }
 
-export const TYPE_LABEL: Record<WorkoutType, string> = {
-  strength: 'Strength',
-  run: 'Run',
-  football: 'Football',
+/** Turkish label per plan block type. */
+export const BLOCK_LABEL: Record<BlockType, string> = {
+  strength: 'Ağırlık',
+  run: 'Koşu',
+  football: 'Halısaha',
+}
+
+/** Icon per plan block type. */
+export const BLOCK_ICON: Record<BlockType, LucideIcon> = {
+  strength: Dumbbell,
+  run: Footprints,
+  football: Trophy,
 }

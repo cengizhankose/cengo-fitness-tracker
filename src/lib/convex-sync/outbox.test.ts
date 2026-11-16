@@ -3,6 +3,8 @@ import { useStore } from '@/store'
 import { useSyncStatusStore } from './status'
 import { startOutbox, INITIAL_BACKOFF_MS } from './outbox'
 import type { SyncClient } from './client'
+import type { SyncedSlices } from './types'
+import { populatedState } from '@/test/fixtures'
 
 function makeClient(overrides: { push?: ReturnType<typeof vi.fn<SyncClient['push']>> } = {}) {
   return {
@@ -26,7 +28,7 @@ describe('startOutbox', () => {
 
     useStore.getState().setChecklistItem('2026-08-03', 'completedWorkout', true)
     await vi.advanceTimersByTimeAsync(50)
-    useStore.getState().setChecklistItem('2026-08-03', 'noAlcohol', true)
+    useStore.getState().setChecklistItem('2026-08-03', 'hitProteinTarget', true)
     await vi.advanceTimersByTimeAsync(150) // 200ms since 1st change, but only 150 since 2nd
     expect(client.push).not.toHaveBeenCalled()
 
@@ -52,6 +54,27 @@ describe('startOutbox', () => {
 
     expect(client.push).toHaveBeenCalledTimes(1)
     expect(client.push).toHaveBeenCalledWith('checklist', expect.any(Array))
+
+    handle.stop()
+  })
+
+  it('pushes exactly the four synced slices, never the retired benchmark / marathonStatus', async () => {
+    const client = makeClient()
+    const state = {
+      ...populatedState(),
+      benchmark: { date: '2026-08-04', timeSec: 1500, createdAt: '2026-08-04T06:30:00.000Z' },
+      marathonStatus: {
+        '2026-09-02': { date: '2026-09-02', status: 'completed', updatedAt: '2026-09-02T19:00:00.000Z' },
+      },
+    } as unknown as SyncedSlices
+    const handle = startOutbox(client, () => state, () => () => {})
+
+    await handle.flushNow()
+
+    const pushed = client.push.mock.calls.map(([slice]) => slice)
+    expect(pushed).toEqual(['checklist', 'checkIns', 'strengthLog', 'runLog'])
+    const counts = Object.fromEntries(client.push.mock.calls.map(([slice, records]) => [slice, records.length]))
+    expect(counts).toEqual({ checklist: 2, checkIns: 2, strengthLog: 2, runLog: 1 })
 
     handle.stop()
   })

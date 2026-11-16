@@ -1,12 +1,11 @@
 import { useStore, pickPersisted } from '@/store'
 import type { DailyChecklistRecord, CheckIn, StrengthLogEntry } from '@/types/userData'
-import type { MarathonStatusRecord } from '@/types/marathon'
-import { runEntryFromWire, benchmarkFromWire } from './adapters'
+import { runEntryFromWire } from './adapters'
 import { getCursor, setPulledThrough } from './cursors'
 import { mergePulled } from './pullMerge'
 import { useSyncStatusStore } from './status'
 import { SLICE_NAMES } from './types'
-import type { SliceName, SyncedSlices, RunWire, BenchmarkWire } from './types'
+import type { SliceName, SyncedSlices, RunWire } from './types'
 import type { SyncClient } from './client'
 
 function keyBy<T>(records: T[], key: (r: T) => string): Record<string, T> {
@@ -36,6 +35,7 @@ async function pullSlice(client: SyncClient, slice: SliceName): Promise<Partial<
 
   switch (slice) {
     case 'checklist':
+      // Records may still carry retired checklist keys; they are kept verbatim.
       return { checklist: keyBy(raw as unknown as DailyChecklistRecord[], (r) => r.date) }
     case 'checkIns':
       return { checkIns: keyBy(raw as unknown as CheckIn[], (r) => r.date) }
@@ -43,13 +43,6 @@ async function pullSlice(client: SyncClient, slice: SliceName): Promise<Partial<
       return { strengthLog: raw as unknown as StrengthLogEntry[] }
     case 'runLog':
       return { runLog: (raw as unknown as RunWire[]).map(runEntryFromWire) }
-    case 'marathonStatus':
-      return { marathonStatus: keyBy(raw as unknown as MarathonStatusRecord[], (r) => r.date) }
-    case 'benchmark': {
-      const wires = raw as unknown as BenchmarkWire[]
-      const newest = [...wires].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)).at(-1)
-      return newest ? { benchmark: benchmarkFromWire(newest) } : {}
-    }
   }
 }
 

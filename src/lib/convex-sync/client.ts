@@ -15,8 +15,6 @@ const PULL_REF = {
   checkIns: api.checkIns.pull,
   strengthLog: api.strengthLog.pull,
   runLog: api.runLog.pull,
-  marathonStatus: api.marathonStatus.pull,
-  benchmark: api.benchmark.pull,
 }
 
 const UPSERT_REF = {
@@ -24,8 +22,6 @@ const UPSERT_REF = {
   checkIns: api.checkIns.upsertBatch,
   strengthLog: api.strengthLog.upsertBatch,
   runLog: api.runLog.upsertBatch,
-  marathonStatus: api.marathonStatus.upsertBatch,
-  benchmark: api.benchmark.upsertBatch,
 }
 
 /** Vite exposes only VITE_-prefixed vars to client code — never the admin key (CLI-only). */
@@ -47,7 +43,7 @@ export function makeHttpSyncClient(url: string, syncSecret: string): SyncClient 
     },
     async push(slice, records) {
       // Each slice's mutation validates its own record shape server-side (convex/*.ts); this
-      // dispatcher is deliberately shape-erased so one function can route to any of the six.
+      // dispatcher is deliberately shape-erased so one function can route to any of the four.
       await client.mutation(UPSERT_REF[slice], { records, syncSecret } as never)
     },
     async syncStateCursor(slice) {

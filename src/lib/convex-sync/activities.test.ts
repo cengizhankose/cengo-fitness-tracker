@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { activityFromWire } from './adapters'
-import {
-  pullActivities,
-  getActivitiesCursor,
-  setActivitiesCursor,
-  type ActivitiesClient,
-} from './activities'
+import { pullActivities, type ActivitiesClient } from './activities'
 import { useActivitiesStore } from '@/store/activities'
 
 const WIRE_BASE = {
@@ -80,17 +75,13 @@ describe('activityFromWire', () => {
   })
 })
 
-function makeClient(overrides: Partial<ActivitiesClient> = {}): ActivitiesClient {
-  return {
-    pull: vi.fn().mockResolvedValue([]),
-    ...overrides,
-  }
+function makeClient(pullAll: ActivitiesClient['pullAll'] = vi.fn().mockResolvedValue([])): ActivitiesClient {
+  return { pullAll }
 }
 
 describe('pullActivities', () => {
   beforeEach(() => {
-    localStorage.clear()
-    useActivitiesStore.setState({ activities: {} })
+    useActivitiesStore.getState().resetAll()
   })
 
   it('is a no-op when sync is disabled (no client)', async () => {
@@ -98,36 +89,47 @@ describe('pullActivities', () => {
     expect(useActivitiesStore.getState().activities).toEqual({})
   })
 
-  it('never throws when the pull fails, and leaves local state untouched', async () => {
-    const client = makeClient({ pull: vi.fn().mockRejectedValue(new Error('offline')) })
+  it('never throws when the pull fails, and leaves the store untouched', async () => {
+    const existing = activityFromWire(WIRE_BASE)
+    useActivitiesStore.getState().upsertMany([existing])
+    const client = makeClient(vi.fn().mockRejectedValue(new Error('offline')))
     await expect(pullActivities(client)).resolves.toBeUndefined()
-    expect(useActivitiesStore.getState().activities).toEqual({})
-    expect(getActivitiesCursor()).toBeUndefined()
+    expect(useActivitiesStore.getState().activities).toEqual({ 'garmin-1': existing })
   })
 
   it('merges pulled records into the activities store, null-stripped', async () => {
-    const client = makeClient({
-      pull: vi.fn().mockResolvedValue([{ ...WIRE_BASE, distanceKm: null }]),
-    })
-    await pullActivities(client)
+    await pullActivities(makeClient(vi.fn().mockResolvedValue([{ ...WIRE_BASE, distanceKm: null, comment: null }])))
 
     const stored = useActivitiesStore.getState().activities['garmin-1']
     expect(stored).not.toHaveProperty('distanceKm')
+    expect(stored).not.toHaveProperty('comment')
     expect(stored?.name).toBe('Morning Run')
   })
 
-  it('advances the cursor to the newest updatedAt pulled, and passes it as updatedSince next time', async () => {
-    const pull = vi.fn().mockResolvedValue([{ ...WIRE_BASE, updatedAt: '2026-09-07T07:30:00.000Z' }])
-    await pullActivities(makeClient({ pull }))
-    expect(getActivitiesCursor()).toBe('2026-09-07T07:30:00.000Z')
-
-    await pullActivities(makeClient({ pull }))
-    expect(pull).toHaveBeenLastCalledWith('2026-09-07T07:30:00.000Z')
+  it('performs a full pull every time: pullAll is called with no arguments, also on the second call', async () => {
+    const pullAll = vi.fn<ActivitiesClient['pullAll']>().mockResolvedValue([WIRE_BASE])
+    const client = makeClient(pullAll)
+    await pullActivities(client)
+    await pullActivities(client)
+    expect(pullAll).toHaveBeenCalledTimes(2)
+    expect(pullAll.mock.calls).toEqual([[], []])
   })
 
-  it('does not move the cursor backward and does not clear it on an empty pull', async () => {
-    setActivitiesCursor('2026-09-07T07:30:00.000Z')
-    await pullActivities(makeClient({ pull: vi.fn().mockResolvedValue([]) }))
-    expect(getActivitiesCursor()).toBe('2026-09-07T07:30:00.000Z')
+  it('picks up a comment added server-side after the first pull, even with updatedAt unchanged', async () => {
+    const pullAll = vi
+      .fn<ActivitiesClient['pullAll']>()
+      .mockResolvedValueOnce([{ ...WIRE_BASE, comment: null }])
+      .mockResolvedValueOnce([
+        { ...WIRE_BASE, comment: 'Nice easy pace', commentGeneratedAt: '2026-09-07T09:00:00.000Z' },
+      ])
+    const client = makeClient(pullAll)
+
+    await pullActivities(client)
+    expect(useActivitiesStore.getState().activities['garmin-1']).not.toHaveProperty('comment')
+
+    await pullActivities(client)
+    const stored = useActivitiesStore.getState().activities['garmin-1']
+    expect(stored?.comment).toBe('Nice easy pace')
+    expect(stored?.updatedAt).toBe(WIRE_BASE.updatedAt)
   })
 })

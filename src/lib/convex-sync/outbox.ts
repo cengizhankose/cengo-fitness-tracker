@@ -1,9 +1,4 @@
-import {
-  checkInToWire,
-  runEntryToWire,
-  strengthEntryToWire,
-  benchmarkToWire,
-} from './adapters'
+import { checkInToWire, runEntryToWire, strengthEntryToWire } from './adapters'
 import { getCursor, setPushedThrough } from './cursors'
 import { useSyncStatusStore } from './status'
 import { SLICE_NAMES } from './types'
@@ -29,13 +24,6 @@ function collectPending(slice: SliceName, state: SyncedSlices, since: string | u
       return state.strengthLog.map(strengthEntryToWire).filter((r) => isNew(r.updatedAt))
     case 'runLog':
       return state.runLog.map(runEntryToWire).filter((r) => isNew(r.updatedAt))
-    case 'marathonStatus':
-      return Object.values(state.marathonStatus).filter((r) => isNew(r.updatedAt))
-    case 'benchmark': {
-      if (!state.benchmark) return []
-      const wire = benchmarkToWire(state.benchmark)
-      return isNew(wire.updatedAt) ? [wire] : []
-    }
   }
 }
 
@@ -102,7 +90,7 @@ export function startOutbox(
         try {
           // Each adapter above already produced the correctly-shaped wire record for its
           // slice; client.push's per-slice arg types are erased here for the same reason
-          // client.ts's dispatcher is (see its comment) — one loop routes to any of the six.
+          // client.ts's dispatcher is (see its comment) — one loop routes to any slice.
           await client.push(slice, pending as Record<string, unknown>[])
           const latest = latestUpdatedAt(pending, since)
           if (latest) setPushedThrough(slice, latest)

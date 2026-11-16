@@ -1,144 +1,170 @@
-// Static training/nutrition plan types — mirror src/data/plan.json exactly.
+// Static training/nutrition plan types — mirror src/data/plan.json (version "2.0") exactly.
 // The JSON is the single source of truth; this is the typed contract the UI codes against.
 
 export type DayName =
   | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday'
   | 'Friday' | 'Saturday' | 'Sunday'
 
-export type WorkoutType = 'strength' | 'run' | 'football'
+/** Ids of the five strength sessions. */
+export type SessionId = 'pull' | 'push' | 'legs' | 'upper-superset' | 'short'
 
+/** The three daily ticks. `completedWorkout` is auto-ticked by logging. */
+export type ChecklistKey = 'completedWorkout' | 'hitProteinTarget' | 'inBedByMidnight'
+
+/**
+ * How an exercise is measured:
+ * - `kg`: weight × reps
+ * - `bodyweight`: reps; `weightKg` 0 = bodyweight, > 0 = added load
+ * - `seconds`: the `reps` field holds seconds; `weightKg` is 0
+ */
+export type ExerciseUnit = 'kg' | 'bodyweight' | 'seconds'
+
+/** Body region key (labels live in lib/exerciseGroups). */
+export type Region = 'chest' | 'back' | 'shoulders' | 'biceps' | 'triceps' | 'legs' | 'core'
+
+/** Inclusive numeric range, e.g. the 12–14 km long-run hold or the 89–90 kg milestone. */
 export interface Range { min: number; max: number }
-export interface MinOnly { min: number }
 
-// ---- meta ----
-export interface ProfileAssumptions {
-  heightCm: number
-  startWeightKg: number
-  estimatedBodyFatPercent: number
-  trainingStyle: string
-  dietStyle: string
+// ---- goal ----
+export interface Goal {
+  startKg: number
+  /** First milestone band. */
+  milestoneKg: Range
+  milestoneDate: string // IsoDate
+  /** Expected loss per week. */
+  kgPerWeek: number
 }
-export interface PlanMeta {
-  planName: string
-  version: string
-  primaryGoals: string[]
-  profileAssumptions: ProfileAssumptions
+
+// ---- sessions ----
+export interface PlanExercise {
+  /** Canonical English gym name — the `exerciseName` key in logged data. */
+  name: string
+  sets: number
+  /** Target reps per set; seconds for `seconds` exercises; 'max' = as many as possible. */
+  reps: number | 'max'
+  unit: ExerciseUnit
+  /** Current working load, used as the target before any history exists. */
+  startKg?: number
+  /** Load increment suggested once the target gets easy (kg exercises only). */
+  stepKg?: number
+  region: Region
+}
+
+export interface SingleItem {
+  kind: 'single'
+  exercise: PlanExercise
+}
+export interface SupersetItem {
+  kind: 'superset'
+  /** 2–3 exercises done back to back. */
+  exercises: PlanExercise[]
+}
+export type SessionItem = SingleItem | SupersetItem
+
+export interface Session {
+  id: SessionId
+  title: string
+  durationMin: number
+  items: SessionItem[]
+}
+
+// ---- weekly template ----
+interface BlockBase {
+  /** Saturday alternatives: pick one of the optional blocks, or rest. */
+  optional?: boolean
+}
+export interface StrengthBlock extends BlockBase {
+  type: 'strength'
+  sessionId: SessionId
+}
+export interface RunBlock extends BlockBase {
+  type: 'run'
+  title: string
+  durationMin?: number
+  /** Sunday group run: distance comes from `longRun` by plan week. */
+  longRun?: boolean
+}
+export interface FootballBlock extends BlockBase {
+  type: 'football'
+  title: string
+  when?: string
+}
+export type DayBlock = StrengthBlock | RunBlock | FootballBlock
+export type BlockType = DayBlock['type']
+
+export interface PlanDay {
+  day: DayName
+  /** Ordered; done in this order on the day. */
+  blocks: DayBlock[]
+}
+
+// ---- running ----
+export interface RunRule {
+  /** Easy = average HR under this. */
+  hrEasyMax: number
+  /** Walk when HR goes above this. */
+  hrWalkAbove: number
+  text: string
+}
+export interface LongRunProgression {
+  /** Target km for plan weeks 1..n. */
+  kmByWeek: number[]
+  /** Range held after the progression ends. */
+  hold: Range
 }
 
 // ---- nutrition ----
-export interface DailyTargets {
-  caloriesKcal: Range
-  proteinG: Range
-  carbsG: Range
-  fatG: Range
-  steps: MinOnly
-  sleepHours: Range
+export interface NutritionTargets {
+  caloriesKcal: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  waterL: number
+  stepsMin: number
 }
-export interface MealItem { name: string; amount: number; unit: string }
 export interface Meal {
   id: string
-  name: string
-  time: string // "12:00" | "after_training" — not a time type
-  items: MealItem[]
-  estimatedCaloriesKcal: number
+  title: string
+  time?: string // "12:30"
+  items: string[]
+  approxKcal: Range
+  proteinG?: number
 }
 export interface Nutrition {
-  dailyTargets: DailyTargets
+  targets: NutritionTargets
   meals: Meal[]
-  rules: string[]
+  eatingOut: string
 }
 
-// ---- weeklySchedule (discriminated union on `type`) ----
-export interface StrengthExercise {
+// ---- supplements ----
+export interface Supplement {
   name: string
-  warmupSets: number
-  workingSets: number
-  repRange: string // "6-10" | "controlled"
-  intensity: string // "RPE 9-10" | "clean reps"
+  dose: string
+  timing?: string
+  note?: string
+  optional?: boolean
 }
-interface ScheduleBase {
-  day: DayName
-  title: string
-  durationMin?: number | null // nullable (Thu) / absent (Sun)
-}
-export interface StrengthDay extends ScheduleBase {
-  type: 'strength'
-  exercises: StrengthExercise[]
-  postWorkoutStretchingId: string
-}
-export interface RunSegment {
-  segment: string // "easy" | "tempo"
-  distanceKm: number
-  pace?: string // only present on tempo segment
-}
-export interface RunDay extends ScheduleBase {
-  type: 'run'
-  intensity?: string // Tue / Sun
-  targetDistanceKm?: number // Tue / Thu
-  structure?: RunSegment[] // Thu
-  progressionKmByWeek?: number[] // Sun (length 12)
-  postWorkoutStretchingId: string
-}
-export interface FootballDay extends ScheduleBase {
-  type: 'football'
-  rule: string // "No extra training"
-}
-export type ScheduleDay = StrengthDay | RunDay | FootballDay
-
-// ---- mobility ----
-export interface MobilityItem {
-  name: string
-  durationSec: number
-  eachSide?: boolean
-}
-export interface MorningMobility {
-  id: string
-  durationMin: number
-  items: MobilityItem[]
-}
-export interface StretchingRoutine {
-  id: string
-  name: string
-  durationMin: number
-  items: MobilityItem[]
-}
-export interface Mobility {
-  dailyMorningMobility: MorningMobility
-  stretchingRoutines: StretchingRoutine[]
-}
-
-// ---- progressTracking ----
-export type ChecklistKey =
-  | 'completedWorkout' | 'completedMorningMobility' | 'completedStretching'
-  | 'hitProteinTarget' | 'hitCalorieTarget' | 'steps10000Plus'
-  | 'sleep75Plus' | 'noAlcohol'
-
-export interface NumericMetric { key: string; label: string; unit: string; type?: undefined }
-export interface ImageMetric { key: string; label: string; type: 'image'; unit?: undefined }
-export type CheckInMetric = NumericMetric | ImageMetric
-
-export interface ProgressTracking {
-  weeklyCheckInDay: DayName
-  weeklyCheckInTime: string
-  metrics: CheckInMetric[]
-  dailyChecklist: ChecklistKey[] // length 8
-  runningMetrics: string[]
-  strengthMetrics: string[]
-}
-
-// ---- benchmark ----
-export interface Benchmark {
-  initialTask: string
-  effort: string
-  requiredData: string[]
+export interface Supplements {
+  items: Supplement[]
+  avoid: string[]
 }
 
 // ---- root ----
 export interface TrainingPlan {
-  meta: PlanMeta
+  name: string
+  version: string
+  startDate: string // IsoDate, Monday of plan week 1
+  goal: Goal
+  /** Monday-first, length 7. */
+  weeklyTemplate: PlanDay[]
+  sessions: Session[]
+  sessionRules: string[]
+  runRule: RunRule
+  longRun: LongRunProgression
   nutrition: Nutrition
-  weeklySchedule: ScheduleDay[] // length 7, Monday-first
-  mobility: Mobility
-  progressTracking: ProgressTracking
-  benchmark: Benchmark
+  supplements: Supplements
+  sleepRule: string
+  dailyChecklist: ChecklistKey[]
+  /** Logged name → canonical name; applied at read time only. */
+  aliases: Record<string, string>
 }

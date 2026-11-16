@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'Cengo Cut',
         short_name: 'Cengo Cut',
-        description: 'Cengo Cut + Marathon Hybrid — training & nutrition tracker',
+        description: 'Cengo Cut — antrenman ve beslenme takibi',
         theme_color: '#0a0b0d',
         background_color: '#0a0b0d',
         display: 'standalone',

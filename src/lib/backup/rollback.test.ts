@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clear, get, set } from 'idb-keyval'
-import { STORAGE_KEY, pickPersisted, useStore } from '@/store'
+import { SCHEMA_VERSION, STORAGE_KEY, pickPersisted, useStore } from '@/store'
 import type { PersistedState } from '@/store'
 import { buildBackup } from './export'
 import {
@@ -13,8 +13,9 @@ import {
   readSnapshot,
   readUndoSnapshot,
 } from './import'
+import type { RollbackSnapshot } from './import'
 import type { DecodedBackup } from './format'
-import { bytesOf, fakePhoto, makeState, populatedState, resetStore } from '@/test/fixtures'
+import { bytesOf, fakePhoto, legacyState, makeState, populatedState, resetStore } from '@/test/fixtures'
 
 /** Number of upcoming setMany calls to reject — the rollback's own writes must succeed. */
 const hooks = vi.hoisted(() => ({ failSetMany: 0 }))
@@ -33,31 +34,30 @@ vi.mock('idb-keyval', async (importOriginal) => {
   }
 })
 
-const FRONT = 'photo:2026-08-03:front'
-const NEW_PHOTO = 'photo:2026-08-10:front'
+const FRONT = 'photo:2026-11-16:front'
+const NEW_PHOTO = 'photo:2026-11-23:front'
 
 /** The state the backup file carries: a photo for a date the local state also has, plus a new one. */
 function incomingState(): PersistedState {
   return makeState({
-    settings: { programStartDate: '2026-05-11' },
     checkIns: {
-      '2026-08-03': {
-        date: '2026-08-03',
+      '2026-11-16': {
+        date: '2026-11-16',
         weightKg: 88,
         frontPhotoKey: FRONT,
-        createdAt: '2026-08-03T07:00:00.000Z',
-        updatedAt: '2026-09-01T07:00:00.000Z',
+        createdAt: '2026-11-16T07:00:00.000Z',
+        updatedAt: '2026-11-25T07:00:00.000Z',
       },
-      '2026-08-10': {
-        date: '2026-08-10',
+      '2026-11-23': {
+        date: '2026-11-23',
         weightKg: 87,
         frontPhotoKey: NEW_PHOTO,
-        createdAt: '2026-08-10T07:00:00.000Z',
-        updatedAt: '2026-08-10T07:00:00.000Z',
+        createdAt: '2026-11-23T07:00:00.000Z',
+        updatedAt: '2026-11-23T07:00:00.000Z',
       },
     },
     runLog: [
-      { id: 'r-new', date: '2026-08-10', distanceKm: 21.1, createdAt: '2026-08-10T06:00:00.000Z' },
+      { id: 'r-new', date: '2026-11-23', distanceKm: 21.1, createdAt: '2026-11-23T06:00:00.000Z' },
     ],
   })
 }
@@ -70,7 +70,7 @@ async function stage(local: PersistedState): Promise<{ decoded: DecodedBackup; l
   resetStore(incomingState())
   await set(FRONT, fakePhoto(2, 256))
   await set(NEW_PHOTO, fakePhoto(3, 256))
-  const built = await buildBackup(new Date('2026-09-01T10:00:00.000Z'))
+  const built = await buildBackup(new Date('2026-11-25T10:00:00.000Z'))
   const file = new File([built.blob], built.filename, { type: 'application/json' })
 
   await clear()
@@ -117,7 +117,7 @@ describe('import never overwrites a live photo', () => {
     const local = populatedState()
     const { decoded, localFront } = await stage(local)
 
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
     expect(outcome.ok).toBe(true)
     if (!outcome.ok) return
 
@@ -141,14 +141,14 @@ describe('import never overwrites a live photo', () => {
     // Kill the run at the first state write, and block the rollback too, so what
     // remains is exactly the on-disk situation after a crash.
     failAfterStateCommit('"r-new"')
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
     expect(outcome.ok).toBe(false)
 
     // Reload from storage the way a fresh boot would.
     const persisted = JSON.parse(envelope ?? 'null') as { state: PersistedState }
     resetStore(persisted.state)
 
-    const checkIn = useStore.getState().checkIns['2026-08-03']
+    const checkIn = useStore.getState().checkIns['2026-11-16']
     expect(checkIn?.frontPhotoKey).toBe(FRONT)
     // The old state still shows the *old* photo — the whole point of staging.
     expect(await bytesOf((await get<Blob>(FRONT)) as Blob)).toEqual(await bytesOf(localFront))
@@ -172,7 +172,7 @@ describe('rollback', () => {
     const envelope = localStorage.getItem(STORAGE_KEY)
 
     hooks.failSetMany = 1
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
 
     expect(outcome.ok).toBe(false)
     if (outcome.ok) return
@@ -193,7 +193,7 @@ describe('rollback', () => {
     const envelope = localStorage.getItem(STORAGE_KEY)
     const { stateAtFailure } = failAfterStateCommit('"r-new"')
 
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
 
     expect(outcome.ok).toBe(false)
     if (outcome.ok) return
@@ -203,7 +203,7 @@ describe('rollback', () => {
     // otherwise this test would pass vacuously.
     expect(stateAtFailure()).toBeDefined()
     expect(stateAtFailure()?.runLog.map((e) => e.id)).toEqual(['r-new'])
-    expect(stateAtFailure()?.settings.programStartDate).toBe('2026-05-11')
+    expect(stateAtFailure()?.checkIns['2026-11-23']?.weightKg).toBe(87)
 
     // ...and both halves of the world are back where they started.
     expect(pickPersisted(useStore.getState())).toEqual(local)
@@ -216,7 +216,7 @@ describe('rollback', () => {
     const { decoded } = await stage(populatedState())
     failAfterStateCommit('"r-new"')
 
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
     expect(outcome.ok).toBe(false)
 
     const snapshot = await readSnapshot()
@@ -235,7 +235,7 @@ describe('rollback', () => {
       throw failure
     })
 
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
 
     expect(outcome.ok).toBe(false)
     if (outcome.ok) return
@@ -252,11 +252,11 @@ describe('manual rollback', () => {
     const { decoded, localFront } = await stage(local)
     const localEnvelope = localStorage.getItem(STORAGE_KEY)
 
-    const imported = await applyBackup(decoded, 'replace', true)
+    const imported = await applyBackup(decoded, 'replace')
     expect(imported.ok).toBe(true)
     const importedState = pickPersisted(useStore.getState())
     const importedEnvelope = localStorage.getItem(STORAGE_KEY)
-    const stagedKey = importedState.checkIns['2026-08-10']?.frontPhotoKey
+    const stagedKey = importedState.checkIns['2026-11-23']?.frontPhotoKey
     expect(stagedKey).toBeDefined()
     expect(await get(stagedKey ?? '')).toBeDefined()
 
@@ -288,7 +288,7 @@ describe('manual rollback', () => {
 
   it('restores the pre-rollback state when applying the snapshot fails', async () => {
     const { decoded } = await stage(populatedState())
-    await applyBackup(decoded, 'replace', true)
+    await applyBackup(decoded, 'replace')
     const importedState = pickPersisted(useStore.getState())
     const importedEnvelope = localStorage.getItem(STORAGE_KEY)
 
@@ -308,7 +308,7 @@ describe('manual rollback', () => {
 
   it('keeps the snapshot keys outside the photo: keyspace so photo GC cannot touch them', async () => {
     const { decoded } = await stage(populatedState())
-    await applyBackup(decoded, 'replace', true)
+    await applyBackup(decoded, 'replace')
     expect(SNAPSHOT_KEY.startsWith('photo:')).toBe(false)
     expect(UNDO_KEY.startsWith('photo:')).toBe(false)
     expect(await get(SNAPSHOT_KEY)).toBeDefined()
@@ -318,7 +318,7 @@ describe('manual rollback', () => {
     const { decoded } = await stage(populatedState())
     localStorage.removeItem(STORAGE_KEY)
 
-    const outcome = await applyBackup(decoded, 'replace', true)
+    const outcome = await applyBackup(decoded, 'replace')
     expect(outcome.ok).toBe(true)
 
     const snapshot = await readSnapshot()
@@ -327,5 +327,46 @@ describe('manual rollback', () => {
 
     await applySnapshot(snapshot)
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+  })
+
+  it('restores a rollback point written by the v2 build onto the v3 shape', async () => {
+    resetStore({
+      ...populatedState(),
+      activeSession: {
+        id: 'session-live',
+        date: '2026-11-16',
+        planSessionId: 'upper-a',
+        exerciseNames: ['Bench Press'],
+        currentIndex: 0,
+        startedAt: '2026-11-16T07:00:00.000Z',
+      },
+    })
+    const legacy = legacyState(2)
+    const envelope = JSON.stringify({ state: legacy, version: 2 })
+    const snapshot: RollbackSnapshot = {
+      createdAt: '2026-09-03T10:00:00.000Z',
+      reason: 'pre-import',
+      envelope,
+      // Exactly what the old build stored: a v2-shaped state.
+      state: legacy as unknown as PersistedState,
+      deleteOnRestore: [],
+      restorePhotos: {},
+    }
+
+    const outcome = await applySnapshot(snapshot)
+    expect(outcome.ok).toBe(true)
+
+    const live = useStore.getState()
+    expect(live._schemaVersion).toBe(SCHEMA_VERSION)
+    expect(live._schemaVersion).toBe(3)
+    expect('benchmark' in live).toBe(false)
+    expect('marathonStatus' in live).toBe(false)
+    expect(live.activeSession).toBeUndefined()
+    expect(live.checklist).toEqual(legacy['checklist'])
+    expect(live.checkIns).toEqual(legacy['checkIns'])
+    expect(live.strengthLog).toEqual(legacy['strengthLog'])
+    expect(live.runLog).toEqual(legacy['runLog'])
+    // The envelope goes back verbatim; the persist migration upgrades it on the next boot.
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(envelope)
   })
 })

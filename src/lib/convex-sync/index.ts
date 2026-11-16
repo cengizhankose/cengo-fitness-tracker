@@ -23,8 +23,8 @@ export function initConvexSync(): void {
   if (!client) return
 
   void pullAll(client)
-  // Activities are pull-only and never enter the checklist/checkIns/.../benchmark merge
-  // system, so they get their own independent client/pull path — see convex-sync/activities.ts.
+  // Activities are pull-only and never enter the mergeState system, so they get their own
+  // independent client/full-pull path — see convex-sync/activities.ts.
   void pullActivities(createActivitiesClient())
   handle = startOutbox(client, () => useStore.getState(), useStore.subscribe)
 }
