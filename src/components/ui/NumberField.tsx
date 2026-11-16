@@ -96,9 +96,9 @@ export function NumberField({
         if (e.button > 0) return
         startRepeat(dir)
       },
-      onPointerUp: stopRepeat,
-      onPointerLeave: stopRepeat,
-      onPointerCancel: stopRepeat,
+      onPointerUp: () => stopRepeat(),
+      onPointerLeave: () => stopRepeat(),
+      onPointerCancel: () => stopRepeat(),
       // Keyboard / assistive-tech activation fires click without a pointer press.
       onClick: (e: MouseEvent<HTMLButtonElement>) => {
         if (e.detail === 0) onChange(stepped(value, dir))
