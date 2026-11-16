@@ -8,7 +8,7 @@ import { formatNumber, kg, pace } from '@/lib/format'
 import type { ExerciseDay } from '@/lib/exerciseStats'
 import type { TimelineDay } from '@/lib/timeline'
 import type { RunLogEntry } from '@/types/userData'
-import { formatSetList } from './format'
+import { dayAnchorId, formatSetList } from './format'
 
 export interface HistoryDayCardProps {
   day: TimelineDay
@@ -16,11 +16,6 @@ export interface HistoryDayCardProps {
   highlighted?: boolean
   onEditExercise: (exerciseDay: ExerciseDay) => void
   onRemoveRun: (run: RunLogEntry) => void
-}
-
-/** DOM id of a day card, the scroll target of `?date=`. */
-export function dayAnchorId(date: string): string {
-  return `gun-${date}`
 }
 
 /** One day of the history feed: weigh-in, strength per exercise, manual runs, Garmin activities. */
@@ -78,7 +73,7 @@ export function HistoryDayCard({ day, highlighted = false, onEditExercise, onRem
           )}
 
           {day.activities.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} />
+            <ActivityCard key={activity.id} activity={activity} compact />
           ))}
         </div>
       </Card>

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, History } from 'lucide-react'
 import { Badge, Button, CheckRow, ConfirmDialog, ListRow } from '@/components/ui'
 import { cx } from '@/components/ui/cx'
-import { SetFields, toStrengthSet } from '@/components/strength/SetFields'
-import type { SetDraft } from '@/components/strength/SetFields'
+import { SetFields } from '@/components/strength/SetFields'
+import { toStrengthSet } from '@/components/strength/setDraft'
+import type { SetDraft } from '@/components/strength/setDraft'
 import { formatShortDate } from '@/lib/dates'
 import { nextTarget, setKind, warmupWeight } from '@/lib/exerciseStats'
 import type { ExerciseSummary, NextTarget } from '@/lib/exerciseStats'
@@ -28,6 +29,11 @@ export interface ExerciseItemProps {
   onLog: (set: StrengthSet) => void
   /** The full corrected set list (edit/remove). */
   onReplaceSets: (sets: StrengthSet[]) => void
+  /**
+   * "Seti kaydet" is the screen's primary action; false once the session is complete and
+   * "Seansı bitir" takes over. Default true.
+   */
+  logIsPrimary?: boolean
 }
 
 /** "Hedef 1 × 5 · 80 kg" for an exercise of the plan session. */
@@ -78,7 +84,16 @@ function collapsedLine(
  * One exercise of the running session: a disclosure row that shows what was logged (or the
  * target) when collapsed, and the target, logged sets and set entry when expanded.
  */
-export function ExerciseItem({ exercise, sets, summary, expanded, onExpand, onLog, onReplaceSets }: ExerciseItemProps) {
+export function ExerciseItem({
+  exercise,
+  sets,
+  summary,
+  expanded,
+  onExpand,
+  onLog,
+  onReplaceSets,
+  logIsPrimary = true,
+}: ExerciseItemProps) {
   const { name, planExercise } = exercise
   const unit = planExercise?.unit ?? summary.unit
   const stepKg = (planExercise ?? findPlanExercise(name))?.stepKg
@@ -132,6 +147,7 @@ export function ExerciseItem({ exercise, sets, summary, expanded, onExpand, onLo
           target={target}
           onLog={onLog}
           onReplaceSets={onReplaceSets}
+          logIsPrimary={logIsPrimary}
         />
       )}
     </div>
@@ -148,9 +164,21 @@ interface ExercisePanelProps {
   target: NextTarget
   onLog: (set: StrengthSet) => void
   onReplaceSets: (sets: StrengthSet[]) => void
+  logIsPrimary: boolean
 }
 
-function ExercisePanel({ id, exercise, unit, stepKg, sets, summary, target, onLog, onReplaceSets }: ExercisePanelProps) {
+function ExercisePanel({
+  id,
+  exercise,
+  unit,
+  stepKg,
+  sets,
+  summary,
+  target,
+  onLog,
+  onReplaceSets,
+  logIsPrimary,
+}: ExercisePanelProps) {
   const { name, planExercise } = exercise
   const lastTop = summary.last?.topSet
   const lastWorking = sets.filter((s) => setKind(s) === 'working').at(-1)
@@ -210,7 +238,13 @@ function ExercisePanel({ id, exercise, unit, stepKg, sets, summary, target, onLo
         lastTime={lastTop && summary.last ? `${formatShortDate(summary.last.date)} · ${formatLoggedSet(lastTop, unit)}` : undefined}
       />
       <CheckRow label="Isınma seti" hint="İlerlemeye sayılmaz" checked={warmup} onChange={toggleWarmup} />
-      <Button size="lg" fullWidth disabled={!next} onClick={() => next && onLog(next)}>
+      <Button
+        size="lg"
+        fullWidth
+        variant={logIsPrimary ? 'primary' : 'secondary'}
+        disabled={!next}
+        onClick={() => next && onLog(next)}
+      >
         Seti kaydet
       </Button>
       <Button variant="ghost" icon={History} to={`/exercises/${encodeURIComponent(name)}`}>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Settings, UtensilsCrossed } from 'lucide-react'
-import { Button, Card, IconButton, ListRow, Screen, SectionTitle, formatDecimal } from '@/components/ui'
+import { Button, Card, IconButton, ListRow, Screen, SectionTitle } from '@/components/ui'
 import { SyncStatusBadge } from '@/components/SyncStatusBadge'
 import { ActivityCard } from '@/components/activity/ActivityCard'
 import { WeekStrip } from '@/components/plan/WeekStrip'
@@ -9,6 +9,7 @@ import { TodayTraining } from '@/components/today/TodayTraining'
 import { WeightCard } from '@/components/today/WeightCard'
 import { recentActivity } from '@/components/today/todayModel'
 import { formatLongDate, toLocalISODate } from '@/lib/dates'
+import { formatNumber } from '@/lib/format'
 import { plan, planWeekNumber } from '@/lib/plan'
 import { weekOverview } from '@/lib/week'
 import { useActivitiesStore } from '@/store/activities'
@@ -57,7 +58,7 @@ export function TodayScreen() {
         <ListRow
           to="/nutrition"
           leading={<UtensilsCrossed size={22} aria-hidden className="text-volt" />}
-          title={`${formatDecimal(caloriesKcal)} kcal · ${formatDecimal(proteinG)} g protein`}
+          title={`${formatNumber(caloriesKcal)} kcal · ${formatNumber(proteinG)} g protein`}
         />
       </Card>
 

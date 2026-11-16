@@ -46,12 +46,13 @@ export function manualRuns(runLog: readonly RunLogEntry[]): RunLogEntry[] {
   return runLog.filter((r) => !r.id.startsWith('garmin-'))
 }
 
-/** "32 dk" under an hour, "1 sa 12 dk" at or above. */
+/** "32 dk" under an hour, "1 sa 12 dk" at or above, "6 sa" on whole hours. */
 export function formatActivityDuration(min: number): string {
   const totalMin = Math.round(min)
   const h = Math.floor(totalMin / 60)
   const m = totalMin % 60
-  return h > 0 ? `${h} sa ${m} dk` : `${m} dk`
+  if (h === 0) return `${m} dk`
+  return m === 0 ? `${h} sa` : `${h} sa ${m} dk`
 }
 
 /** "6,4 km" — distanceKm already carries the Garmin metres→km conversion. */

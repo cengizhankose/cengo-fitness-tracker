@@ -1,6 +1,7 @@
-import { Card, Stat, StatGrid, TrendBadge, formatDecimal } from '@/components/ui'
+import { Card, Stat, StatGrid, TrendBadge } from '@/components/ui'
 import { formatShortDate } from '@/lib/dates'
 import type { MetricPoint, WeeklyAverage } from '@/lib/weight'
+import { formatNumber } from '@/lib/format'
 
 export interface WeightStatsCardProps {
   latest?: MetricPoint
@@ -35,7 +36,7 @@ export function WeightStatsCard({ latest, thisWeek, changeKg }: WeightStatsCardP
           value={
             changeKg == null
               ? '—'
-              : `${changeKg > 0 ? '+' : changeKg < 0 ? '−' : ''}${formatDecimal(Math.abs(changeKg), 1)}`
+              : `${changeKg > 0 ? '+' : changeKg < 0 ? '−' : ''}${formatNumber(Math.abs(changeKg), 1)}`
           }
           unit={changeKg == null ? undefined : 'kg'}
           hint={

@@ -71,6 +71,10 @@ describe('PlanScreen week', () => {
     expect(within(sunday).getByText('8 km')).toBeInTheDocument()
 
     expect(dayRow('Perşembe')).toHaveAttribute('aria-current', 'date')
+
+    const nutrition = screen.getByRole('link', { name: /Beslenme ve takviye/ })
+    expect(nutrition).toHaveAttribute('href', '/nutrition')
+    expect(nutrition).toHaveTextContent('2.400 kcal · 190 g protein')
     expect(dayRow('Pazartesi')).not.toHaveAttribute('aria-current')
   })
 

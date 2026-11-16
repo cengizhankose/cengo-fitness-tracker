@@ -56,7 +56,7 @@ export type TimelineFilter = 'all' | 'strength' | 'run' | 'other'
 /** Turkish filter chip labels. */
 export const TIMELINE_FILTER_LABEL: Record<TimelineFilter, string> = {
   all: 'Tümü',
-  strength: 'Ağırlık',
+  strength: 'Kuvvet',
   run: 'Koşu',
   other: 'Diğer',
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Button, CheckRow, Sheet } from '@/components/ui'
-import { SetFields, toStrengthSet } from '@/components/strength/SetFields'
-import type { SetDraft } from '@/components/strength/SetFields'
+import { SetFields } from '@/components/strength/SetFields'
+import { toStrengthSet } from '@/components/strength/setDraft'
+import type { SetDraft } from '@/components/strength/setDraft'
 import type { ExerciseUnit } from '@/types/plan'
 import type { StrengthSet } from '@/types/userData'
 

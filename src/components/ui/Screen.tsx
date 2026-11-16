@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
@@ -19,9 +20,31 @@ export interface ScreenProps {
   children?: ReactNode
 }
 
+/**
+ * Height of the mounted screen's sticky footer, published on `<html>` so `ToastHost` can sit
+ * above it. Unset when the current screen has no footer.
+ */
+const FOOTER_HEIGHT_VAR = '--screen-footer-h'
+
 /** Page wrapper: sticky header, gutter-padded body, optional sticky primary-action footer. */
 export function Screen({ title, subtitle, back, action, footer, children }: ScreenProps) {
   const navigate = useNavigate()
+  const footerRef = useRef<HTMLDivElement>(null)
+  const hasFooter = footer != null
+
+  useEffect(() => {
+    const el = footerRef.current
+    if (!el) return
+    const root = document.documentElement.style
+    const publish = () => root.setProperty(FOOTER_HEIGHT_VAR, `${el.offsetHeight}px`)
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      root.removeProperty(FOOTER_HEIGHT_VAR)
+    }
+  }, [hasFooter])
 
   function goBack() {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
@@ -57,7 +80,10 @@ export function Screen({ title, subtitle, back, action, footer, children }: Scre
       </div>
 
       {footer != null && (
-        <div className="sticky bottom-0 z-20 border-t border-border/60 bg-bg/95 px-gutter pt-3 pb-[calc(0.75rem+var(--chrome-bottom,0px))] backdrop-blur-md">
+        <div
+          ref={footerRef}
+          className="sticky bottom-0 z-20 border-t border-border/60 bg-bg/95 px-gutter pt-3 pb-[calc(0.75rem+var(--chrome-bottom,0px))] backdrop-blur-md"
+        >
           {footer}
         </div>
       )}

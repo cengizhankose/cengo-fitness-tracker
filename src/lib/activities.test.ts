@@ -66,6 +66,11 @@ describe('formatActivityDuration', () => {
     expect(formatActivityDuration(72)).toBe('1 sa 12 dk')
   })
 
+  it('drops "0 dk" on whole hours', () => {
+    expect(formatActivityDuration(360)).toBe('6 sa')
+    expect(formatActivityDuration(59.6)).toBe('1 sa')
+  })
+
   it('rounds fractional minutes', () => {
     expect(formatActivityDuration(32.6)).toBe('33 dk')
   })

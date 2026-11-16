@@ -69,8 +69,8 @@ export function PlanScreen() {
           to="/nutrition"
           leading={<Utensils size={20} aria-hidden className="text-text-muted" />}
           title="Beslenme ve takviye"
-          trailing={
-            <span className="num text-sm text-text-muted">
+          subtitle={
+            <span className="num">
               {formatNumber(caloriesKcal)} kcal · {formatNumber(proteinG)} g protein
             </span>
           }

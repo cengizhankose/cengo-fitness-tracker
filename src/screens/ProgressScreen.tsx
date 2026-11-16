@@ -7,9 +7,10 @@ import { WeekTicksCard } from '@/components/progress/WeekTicksCard'
 import { WeighInSheet } from '@/components/progress/WeighInSheet'
 import { WeightStatsCard } from '@/components/progress/WeightStatsCard'
 import { recentWeeks } from '@/components/progress/recentWeeks'
-import { Button, Screen, formatDecimal } from '@/components/ui'
+import { Button, Screen } from '@/components/ui'
 import { BarChartCard, LineChartCard } from '@/components/ui/charts'
 import { mondayOf, toLocalISODate } from '@/lib/dates'
+import { formatNumber } from '@/lib/format'
 import { PLANNED_STRENGTH_DAYS_PER_WEEK, plan } from '@/lib/plan'
 import { runKmPerWeek, strengthDaysPerWeek, weekOverview } from '@/lib/week'
 import { goalProgress, latestWeight, weeklyAverages, weeklyChangeKg, weightSeries } from '@/lib/weight'
@@ -116,7 +117,7 @@ export function ProgressScreen() {
         seriesLabel="Mesafe"
         unit="km"
         tone="run"
-        aside={`bu hafta ${formatDecimal(overview.runKm, 1)} km`}
+        aside={`bu hafta ${formatNumber(overview.runKm, 1)} km`}
         emptyHint="Koşu kaydı ya da Garmin aktivitesi gelince burada görünür"
         height={150}
       />

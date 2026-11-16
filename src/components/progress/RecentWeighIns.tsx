@@ -1,7 +1,8 @@
-import { Card, ListRow, formatDecimal } from '@/components/ui'
+import { Card, ListRow } from '@/components/ui'
 import { formatShortDate } from '@/lib/dates'
 import type { MetricPoint } from '@/lib/weight'
 import type { CheckIn, IsoDate } from '@/types/userData'
+import { formatNumber } from '@/lib/format'
 
 const SHOWN = 10
 
@@ -20,7 +21,7 @@ export function RecentWeighIns({ series, checkIns, onEdit }: RecentWeighInsProps
     <Card title="Son tartılar" flush>
       {rows.map(({ date, value }) => {
         const { waistCm, notes } = checkIns[date] ?? {}
-        const extra = [waistCm != null ? `bel ${formatDecimal(waistCm, 1)} cm` : undefined, notes]
+        const extra = [waistCm != null ? `bel ${formatNumber(waistCm, 1)} cm` : undefined, notes]
           .filter(Boolean)
           .join(' · ')
         return (
@@ -30,7 +31,7 @@ export function RecentWeighIns({ series, checkIns, onEdit }: RecentWeighInsProps
             subtitle={extra || undefined}
             trailing={
               <span className="text-lg font-semibold tabular-nums">
-                {formatDecimal(value, 1)} <span className="text-sm font-medium text-text-muted">kg</span>
+                {formatNumber(value, 1)} <span className="text-sm font-medium text-text-muted">kg</span>
               </span>
             }
             onClick={() => onEdit(date)}

@@ -264,6 +264,42 @@ describe('SessionScreen with a running session', () => {
     expect(row('Shoulder Press')).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('keeps one primary action: "Seti kaydet" until the plan is done, then "Seansı bitir"', async () => {
+    const user = userEvent.setup()
+    const id = startPush()
+    for (const ex of sessionExercises(sessionById('push')!)) {
+      if (ex.name === 'Machine Chest Press') continue
+      s().upsertSessionSets({
+        sessionId: id,
+        date: DATE,
+        exerciseName: ex.name,
+        sets: Array.from({ length: ex.sets }, () => ({ weightKg: 20, reps: 10, kind: 'working' as const })),
+      })
+    }
+    s().setSessionIndex(idx('Machine Chest Press'))
+    renderApp()
+
+    const saveButton = () => screen.getByRole('button', { name: 'Seti kaydet' })
+    const finishButton = () => screen.getByRole('button', { name: 'Seansı bitir' })
+    expect(screen.getByText('5/6 hareket')).toBeInTheDocument()
+    expect(saveButton()).toHaveClass('bg-volt')
+    expect(finishButton()).not.toHaveClass('bg-volt')
+
+    await user.click(saveButton())
+    expect(screen.getByText('6/6 hareket')).toBeInTheDocument()
+    expect(finishButton()).toHaveClass('bg-volt')
+    expect(saveButton()).not.toHaveClass('bg-volt')
+  })
+
+  it('keeps "Seansı bitir" secondary in a free session while an exercise is open', () => {
+    s().startSession(DATE, 'free', ['Bench Press'])
+    renderApp()
+
+    expect(row('Bench Press')).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Seti kaydet' })).toHaveClass('bg-volt')
+    expect(screen.getByRole('button', { name: 'Seansı bitir' })).not.toHaveClass('bg-volt')
+  })
+
   it('finishes a session with working sets as a counted workout', async () => {
     const user = userEvent.setup()
     startPush()

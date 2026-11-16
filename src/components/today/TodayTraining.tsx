@@ -17,6 +17,7 @@ import {
   activeSessionProgress,
   formatIncrease,
   formatTarget,
+  loggedTitle,
   runTargetLabel,
 } from './todayModel'
 
@@ -82,7 +83,7 @@ export function TodayTraining({ today, day }: TodayTrainingProps) {
   } else if (loggedToday.length > 0) {
     main = (
       <Card
-        title={daySession?.title ?? 'Antrenman'}
+        title={loggedTitle(loggedToday, daySession)}
         aside={
           <Badge tone="success" icon={Check}>
             Yapıldı

@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { History, Plus, SearchX } from 'lucide-react'
 import { AddEntrySheet } from '@/components/history/AddEntrySheet'
 import { EditExerciseDaySheet } from '@/components/history/EditExerciseDaySheet'
-import { HistoryDayCard, dayAnchorId } from '@/components/history/HistoryDayCard'
-import { formatMonthYear } from '@/components/history/format'
+import { HistoryDayCard } from '@/components/history/HistoryDayCard'
+import { dayAnchorId, formatMonthYear } from '@/components/history/format'
 import {
   Button,
   ConfirmDialog,
@@ -28,7 +28,6 @@ import type { IsoDate, RunLogEntry } from '@/types/userData'
 /** Day cards rendered per "Daha fazla göster" step. */
 const PAGE_DAYS = 30
 const FILTERS: readonly TimelineFilter[] = ['all', 'strength', 'run', 'other']
-const FILTER_LABEL: Record<TimelineFilter, string> = { ...TIMELINE_FILTER_LABEL, strength: 'Kuvvet' }
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 interface MonthGroup {
@@ -69,7 +68,7 @@ export function HistoryScreen() {
     () =>
       FILTERS.map((f) => ({
         value: f,
-        label: FILTER_LABEL[f],
+        label: TIMELINE_FILTER_LABEL[f],
         count: filterTimeline(timeline, f).length,
       })),
     [timeline],

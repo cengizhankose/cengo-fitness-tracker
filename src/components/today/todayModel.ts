@@ -6,10 +6,10 @@ import { addDays } from '@/lib/dates'
 import { formatSet, kg } from '@/lib/format'
 import { longRunTargetKm, plan, sessionById, sessionExercises } from '@/lib/plan'
 import { sessionEntries, setKind } from '@/lib/exerciseStats'
-import type { NextTarget } from '@/lib/exerciseStats'
+import type { ExerciseDay, NextTarget } from '@/lib/exerciseStats'
 import { describeBlock } from '@/components/plan/blockText'
 import type { Activity } from '@/types/activities'
-import type { RunBlock } from '@/types/plan'
+import type { RunBlock, Session } from '@/types/plan'
 import type { ActiveSession, IsoDate, StrengthLogEntry } from '@/types/userData'
 
 /** Today's target as "80 kg × 5" / "+5 kg × 8" / "max tekrar" / "45 sn"; "—" for an unknown load. */
@@ -53,6 +53,30 @@ export function activeSessionProgress(
     return working >= (targetSets.get(name) ?? 1)
   }).length
   return { done, total: active.exerciseNames.length }
+}
+
+/** Title of the done card when nothing matches a plan session. */
+export const LOGGED_FALLBACK_TITLE = 'Bugünkü antrenman'
+
+/**
+ * Title for what was logged today. Sets written by a session flow carry a `sessionId`, but the
+ * id → plan session link is gone once the session ends, so it is derived from the exercise set:
+ * a plan session listing every logged name, preferring the day's planned one. Without session
+ * ids the day's planned title is used only when every logged exercise belongs to it.
+ */
+export function loggedTitle(days: readonly ExerciseDay[], daySession: Session | undefined): string {
+  const names = days.map((d) => d.exerciseName)
+  const covers = (session: Session) => {
+    const listed = new Set(sessionExercises(session).map((ex) => ex.name))
+    return names.every((n) => listed.has(n))
+  }
+  if (daySession && covers(daySession)) return daySession.title
+  const fromSession = days.length > 0 && days.every((d) => d.sets.every((s) => s.sessionId != null))
+  if (fromSession) {
+    const match = plan.sessions.find(covers)
+    if (match) return match.title
+  }
+  return LOGGED_FALLBACK_TITLE
 }
 
 /** Days (today included) a Garmin activity still counts as recent on Bugün. */

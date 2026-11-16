@@ -148,6 +148,25 @@ describe('ProgressScreen — weekly average and change', () => {
   })
 })
 
+describe('ProgressScreen — strength chart', () => {
+  it('with one week of data the header reads "bu hafta 1/5"', () => {
+    useStore.setState({
+      strengthLog: [
+        {
+          id: 'real-0',
+          date: '2026-11-16',
+          exerciseName: 'Incline Dumbbell Press',
+          sets: [{ weightKg: 30, reps: 7, rpe: 8 }],
+          createdAt: '2026-11-16T07:10:00.000Z',
+        },
+      ],
+    })
+    renderScreen()
+
+    expect(section('Güç antrenmanı')).toHaveTextContent('bu hafta 1/5')
+  })
+})
+
 describe('ProgressScreen — goal card', () => {
   it('asks for the first weigh-in when there is none', async () => {
     const user = renderScreen()

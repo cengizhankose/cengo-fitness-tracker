@@ -230,7 +230,7 @@ describe('TodayScreen — daily ticks', () => {
 })
 
 describe('TodayScreen — real 2026-11-16 data', () => {
-  it('shows Pull as done with the 8 logged sets grouped by exercise, with RPE', () => {
+  it('titles the done card "Bugünkü antrenman" (not Pull) and shows the 8 logged sets with RPE', () => {
     setToday('2026-11-16')
     useStore.setState({
       strengthLog: REAL_2026_11_16,
@@ -252,7 +252,8 @@ describe('TodayScreen — real 2026-11-16 data', () => {
     useActivitiesStore.setState({ activities: { [SARIYER_RUN.id]: SARIYER_RUN } })
     renderToday()
 
-    const card = screen.getByRole('heading', { name: 'Pull' }).closest('section')!
+    expect(screen.queryByRole('heading', { name: 'Pull' })).not.toBeInTheDocument()
+    const card = screen.getByRole('heading', { name: 'Bugünkü antrenman' }).closest('section')!
     expect(within(card).getByText('Yapıldı')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Antrenmana başla' })).not.toBeInTheDocument()
 
@@ -284,5 +285,31 @@ describe('TodayScreen — real 2026-11-16 data', () => {
       'true',
     )
     expect(screen.getByRole('link', { name: 'Geçmiş' })).toHaveAttribute('href', '/history')
+    expect(screen.getByRole('link', { name: /2\.400 kcal · 190 g protein/ })).toBeInTheDocument()
+  })
+})
+
+describe('TodayScreen — done card title', () => {
+  it('uses the day\'s planned title when every logged exercise belongs to it', () => {
+    setToday('2026-11-16')
+    useStore.setState({
+      strengthLog: REAL_2026_11_16.filter((e) =>
+        ['Seated Cable Row', 'Cable Curl'].includes(e.exerciseName),
+      ),
+    })
+    renderToday()
+    expect(screen.getByRole('heading', { name: 'Pull' })).toBeInTheDocument()
+  })
+
+  it('uses the finished session matching the logged exercises when entries carry a sessionId', () => {
+    setToday('2026-11-16')
+    useStore.setState({
+      strengthLog: REAL_2026_11_16.filter((e) =>
+        ['Pull Up / Lat Pulldown', 'Machine Chest Press', 'Seated Cable Row'].includes(e.exerciseName),
+      ).map((e) => ({ ...e, sessionId: 'session-1' })),
+    })
+    renderToday()
+    expect(screen.getByRole('heading', { name: 'Üst vücut superset' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Pull' })).not.toBeInTheDocument()
   })
 })

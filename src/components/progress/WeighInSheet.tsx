@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, DateField, NumberField, Sheet, TextField, formatDecimal } from '@/components/ui'
+import { Button, DateField, NumberField, Sheet, TextField } from '@/components/ui'
 import { toLocalISODate } from '@/lib/dates'
 import { plan } from '@/lib/plan'
 import { latestWeight } from '@/lib/weight'
@@ -7,6 +7,7 @@ import { useStore } from '@/store'
 import { useCheckIns } from '@/store/selectors'
 import { useToast } from '@/store/toast'
 import type { IsoDate } from '@/types/userData'
+import { formatNumber } from '@/lib/format'
 
 export interface WeighInSheetProps {
   open: boolean
@@ -82,7 +83,7 @@ function WeighInForm({ onClose, date: initialDate }: { onClose: () => void; date
       waistCm: draft.waistCm === '' ? undefined : draft.waistCm,
       notes: notes === '' ? undefined : notes,
     })
-    push(`Tartı kaydedildi: ${formatDecimal(draft.weightKg, 1)} kg`, 'success')
+    push(`Tartı kaydedildi: ${formatNumber(draft.weightKg, 1)} kg`, 'success')
     onClose()
   }
 

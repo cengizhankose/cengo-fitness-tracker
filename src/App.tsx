@@ -37,7 +37,7 @@ export function App() {
         </div>
       </main>
       {!isSession && <TabBar />}
-      <ToastHost />
+      <ToastHost aboveTabBar={!isSession} />
     </div>
   )
 }

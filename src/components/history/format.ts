@@ -14,6 +14,11 @@ export function formatMonthYear(date: IsoDate): string {
   return `${MONTH_TR[d.getMonth()]} ${d.getFullYear()}`
 }
 
+/** DOM id of a day card, the scroll target of `?date=`. */
+export function dayAnchorId(date: string): string {
+  return `gun-${date}`
+}
+
 /** Error shown when a set in a history form can't be logged yet (see `toStrengthSet`). */
 export const MISSING_SET_MESSAGE: Record<ExerciseUnit, string> = {
   kg: 'Her sete ağırlık ve tekrar gir.',

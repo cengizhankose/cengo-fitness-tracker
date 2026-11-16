@@ -29,8 +29,8 @@ export const router = createBrowserRouter([
         },
       },
       { path: 'history', element: <HistoryScreen /> },
-      // Progress is the only screen that pulls in recharts — lazy-split so it stays out
-      // of the initial bundle.
+      // Progress draws charts (recharts) too — lazy-split like the exercise detail so
+      // recharts stays out of the initial bundle.
       {
         path: 'progress',
         lazy: async () => {

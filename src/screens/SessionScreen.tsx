@@ -89,13 +89,18 @@ function RunningSession({ active }: { active: ActiveSession }) {
     return new Map(names.map((name) => [name, exerciseSummary(history, name)]))
   }, [strengthLog, active.id, names])
 
-  const progressText = useMemo(() => {
+  const { progressText, planComplete } = useMemo(() => {
     if (session) {
-      const { exercises } = sessionProgress(session, strengthLog, active.id)
-      return `${exercises.filter((e) => e.done).length}/${exercises.length} hareket`
+      const { exercises, complete } = sessionProgress(session, strengthLog, active.id)
+      const doneCount = exercises.filter((e) => e.done).length
+      return { progressText: `${doneCount}/${exercises.length} hareket`, planComplete: complete }
     }
-    return `${names.filter((n) => workingDoneIn(setsByName.get(n)) > 0).length} hareket`
+    const logged = names.filter((n) => workingDoneIn(setsByName.get(n)) > 0).length
+    return { progressText: `${logged} hareket`, planComplete: false }
   }, [session, strengthLog, active.id, names, setsByName])
+  // One primary action at a time: "Seti kaydet" in the open exercise while there is work
+  // left, "Seansı bitir" once the plan is done (free sessions: when no exercise is open).
+  const finishIsPrimary = session ? planComplete : names.length === 0
 
   function writeSets(name: string, sets: StrengthSet[]) {
     upsertSessionSets({ sessionId: active.id, date: active.date, exerciseName: name, sets })
@@ -144,7 +149,7 @@ function RunningSession({ active }: { active: ActiveSession }) {
         </>
       }
       footer={
-        <Button size="lg" fullWidth onClick={finish}>
+        <Button size="lg" fullWidth variant={finishIsPrimary ? 'primary' : 'secondary'} onClick={finish}>
           Seansı bitir
         </Button>
       }
@@ -176,6 +181,7 @@ function RunningSession({ active }: { active: ActiveSession }) {
                     onExpand={() => setSessionIndex(ex.index)}
                     onLog={(set) => logSet(ex.name, set)}
                     onReplaceSets={(sets) => writeSets(ex.name, sets)}
+                    logIsPrimary={!finishIsPrimary}
                   />
                 </Fragment>
               ))

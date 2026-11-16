@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { SetFields, toStrengthSet } from '@/components/strength/SetFields'
-import type { SetDraft } from '@/components/strength/SetFields'
+import { SetFields } from '@/components/strength/SetFields'
+import { toStrengthSet } from '@/components/strength/setDraft'
+import type { SetDraft } from '@/components/strength/setDraft'
 import {
   Button,
   DateField,
@@ -91,19 +92,17 @@ function StrengthForm({ onSaved }: { onSaved: (date: IsoDate) => void }) {
     () => allExerciseSummaries(strengthLog).map((o) => o.exerciseName),
     [strengthLog],
   )
-  const typed = query.trim()
-  const needle = typed.toLocaleLowerCase('tr-TR')
-  const matches = useMemo(
-    () =>
-      (needle ? catalog.filter((n) => n.toLocaleLowerCase('tr-TR').includes(needle)) : catalog).slice(
-        0,
-        MAX_MATCHES,
-      ),
-    [catalog, needle],
-  )
-  const isKnown =
-    catalog.some((n) => n.toLocaleLowerCase('tr-TR') === needle) ||
-    canonicalExerciseName(typed) !== typed
+  const { typed, matches, isKnown } = useMemo(() => {
+    const typed = query.trim()
+    const needle = typed.toLocaleLowerCase('tr-TR')
+    const found = needle ? catalog.filter((n) => n.toLocaleLowerCase('tr-TR').includes(needle)) : catalog
+    return {
+      typed,
+      matches: found.slice(0, MAX_MATCHES),
+      isKnown:
+        catalog.some((n) => n.toLocaleLowerCase('tr-TR') === needle) || canonicalExerciseName(typed) !== typed,
+    }
+  }, [catalog, query])
 
   const unit = exerciseName ? exerciseUnit(exerciseName) : 'kg'
   const last = useMemo(

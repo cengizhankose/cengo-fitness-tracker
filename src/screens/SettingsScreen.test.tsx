@@ -96,7 +96,9 @@ describe('SettingsScreen · export', () => {
     await user.click(screen.getByRole('button', { name: 'Yedeği indir' }))
     await waitFor(() => expect(saved).toHaveLength(1))
 
-    const file = new File([saved[0]], 'cengo-cut-backup.json', { type: 'application/json' })
+    const [blob] = saved
+    if (!blob) throw new Error('no backup blob was created')
+    const file = new File([blob], 'cengo-cut-backup.json', { type: 'application/json' })
     const read = await readBackupFile(file)
     expect(read.ok).toBe(true)
     if (!read.ok) return

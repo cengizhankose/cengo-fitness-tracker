@@ -1,11 +1,12 @@
 import { useId, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { PhotoUpload } from '@/components/PhotoUpload'
-import { Card, DateField, Sparkline, formatDecimal } from '@/components/ui'
+import { Card, DateField, Sparkline } from '@/components/ui'
 import { cx } from '@/components/ui/cx'
 import { formatShortDate } from '@/lib/dates'
 import { metricSeries } from '@/lib/weight'
 import type { CheckIn, IsoDate } from '@/types/userData'
+import { formatNumber } from '@/lib/format'
 
 export interface BodyCardProps {
   checkIns: Readonly<Record<IsoDate, CheckIn>>
@@ -34,7 +35,7 @@ export function BodyCard({ checkIns, today }: BodyCardProps) {
           <span className="block text-base font-semibold">Fotoğraf ve bel</span>
           <span className="block truncate text-sm text-text-muted">
             {lastWaist
-              ? `Bel ${formatDecimal(lastWaist.value, 1)} cm · ${formatShortDate(lastWaist.date)}`
+              ? `Bel ${formatNumber(lastWaist.value, 1)} cm · ${formatShortDate(lastWaist.date)}`
               : 'Ön ve yan fotoğraf, bel ölçüsü'}
           </span>
         </span>
@@ -56,13 +57,13 @@ export function BodyCard({ checkIns, today }: BodyCardProps) {
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-text-muted">Bel</span>
                 <span className="num text-num">
-                  {formatDecimal(lastWaist.value, 1)}
+                  {formatNumber(lastWaist.value, 1)}
                   <span className="ml-1 text-sm font-medium text-text-muted">cm</span>
                 </span>
               </div>
               <Sparkline
                 values={waist.map((p) => p.value)}
-                label={`Bel ${waist.length} ölçüm: ${formatDecimal(waist[0]!.value, 1)} → ${formatDecimal(lastWaist.value, 1)} cm`}
+                label={`Bel ${waist.length} ölçüm: ${formatNumber(waist[0]!.value, 1)} → ${formatNumber(lastWaist.value, 1)} cm`}
                 width={140}
                 height={40}
                 tone="info"

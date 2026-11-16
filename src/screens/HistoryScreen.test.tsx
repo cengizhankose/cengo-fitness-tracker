@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { HistoryScreen } from '@/screens/HistoryScreen'
-import { dayAnchorId } from '@/components/history/HistoryDayCard'
+import { dayAnchorId } from '@/components/history/format'
 import { addDays } from '@/lib/dates'
 import { useStore } from '@/store'
 import { useActivitiesStore } from '@/store/activities'
@@ -206,6 +206,33 @@ describe('HistoryScreen', () => {
     const walk = within(dayCard('2026-11-14')).getByText('Sisli Walking').closest('article')!
     expect(walk).toHaveTextContent('3 sa 7 dk')
     expect(walk).not.toHaveTextContent('/km')
+  })
+
+  it('clamps a long coach comment behind "devamı" and keeps the stats visible', async () => {
+    seed()
+    const long = 'Uzun koç yorumu. '.repeat(20).trim()
+    const marathonId = 'garmin-24929464161'
+    const marathonActivity = ACTIVITIES.find((a) => a.id === marathonId)!
+    useActivitiesStore.setState((s) => ({
+      activities: { ...s.activities, [marathonId]: { ...marathonActivity, comment: long } },
+    }))
+    const user = userEvent.setup()
+    renderHistory()
+
+    const marathon = within(dayCard('2026-11-01')).getByText(/Istanbul Marathon$/).closest('article')!
+    expect(within(marathon).getByText(long)).toHaveClass('line-clamp-3')
+    expect(marathon).toHaveTextContent('42,66 km')
+    expect(marathon).toHaveTextContent('6 sa 3 dk')
+
+    const toggle = within(marathon).getByRole('button', { name: 'devamı' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+    expect(within(marathon).getByText(long)).not.toHaveClass('line-clamp-3')
+    expect(within(marathon).getByRole('button', { name: 'kısalt' })).toHaveAttribute('aria-expanded', 'true')
+
+    // Short comments are never clamped.
+    const walk = within(dayCard('2026-11-14')).getByText('Sisli Walking').closest('article')!
+    expect(within(walk).queryByRole('button', { name: 'devamı' })).not.toBeInTheDocument()
   })
 
   it('counts days per filter and narrows the feed', async () => {

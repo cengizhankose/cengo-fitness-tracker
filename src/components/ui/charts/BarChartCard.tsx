@@ -52,6 +52,9 @@ export interface BarChartCardProps {
   height?: number
 }
 
+/** Bar width cap, so a single week draws as one bar instead of filling the plot. */
+const MAX_BAR_PX = 32
+
 /** Weekly bar chart in a Card with an optional target line; Turkish week ticks. */
 export function BarChartCard({
   title,
@@ -119,7 +122,13 @@ export function BarChartCard({
                   )}
                 </ReferenceLine>
               )}
-              <Bar dataKey="value" name={seriesLabel} radius={[6, 6, 0, 0]} isAnimationActive={false}>
+              <Bar
+                dataKey="value"
+                name={seriesLabel}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={MAX_BAR_PX}
+                isAnimationActive={false}
+              >
                 {data.map((d) => (
                   <Cell
                     key={d.weekStart}
