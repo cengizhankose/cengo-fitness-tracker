@@ -4,11 +4,14 @@ import { Dumbbell, Info, Plus, X } from 'lucide-react'
 import { Button, Card, ConfirmDialog, EmptyState, IconButton, Screen, Sheet } from '@/components/ui'
 import { AddExerciseSheet } from '@/components/session/AddExerciseSheet'
 import { ExerciseItem } from '@/components/session/ExerciseItem'
+import { RestTimerPanel } from '@/components/session/RestTimerPanel'
+import { primeRestAlarm } from '@/components/session/restAlarm'
 import { SessionPickerList } from '@/components/session/SessionPickerSheet'
 import {
   formatLoggedSet,
   groupMembers,
   nextExerciseIndex,
+  REST_SECONDS,
   planExercisesByName,
   sessionLayout,
   supersetRounds,
@@ -65,6 +68,7 @@ function RunningSession({ active }: { active: ActiveSession }) {
   const addSessionExercise = useStore((s) => s.addSessionExercise)
   const finishSession = useStore((s) => s.finishSession)
   const discardSession = useStore((s) => s.discardSession)
+  const startRest = useStore((s) => s.startRest)
 
   const [exitOpen, setExitOpen] = useState(false)
   const [rulesOpen, setRulesOpen] = useState(false)
@@ -109,6 +113,9 @@ function RunningSession({ active }: { active: ActiveSession }) {
   function logSet(name: string, set: StrengthSet) {
     writeSets(name, [...(setsByName.get(name) ?? []), set])
     pushToast(`Kaydedildi · ${formatLoggedSet(set, planByName.get(name)?.unit ?? exerciseUnit(name))}`, 'success')
+    // Inside the "Seti kaydet" tap: the only moment iOS lets the page arm the end-of-rest beep.
+    primeRestAlarm()
+    startRest(REST_SECONDS[setKind(set)])
     if (setKind(set) !== 'working') return
     const log = useStore.getState().strengthLog
     const next = nextExerciseIndex(
@@ -149,9 +156,12 @@ function RunningSession({ active }: { active: ActiveSession }) {
         </>
       }
       footer={
-        <Button size="lg" fullWidth variant={finishIsPrimary ? 'primary' : 'secondary'} onClick={finish}>
-          Seansı bitir
-        </Button>
+        <>
+          {active.rest && <RestTimerPanel rest={active.rest} />}
+          <Button size="lg" fullWidth variant={finishIsPrimary ? 'primary' : 'secondary'} onClick={finish}>
+            Seansı bitir
+          </Button>
+        </>
       }
     >
       {names.length === 0 ? (

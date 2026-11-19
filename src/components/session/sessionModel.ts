@@ -4,7 +4,7 @@
 import { formatNumber, formatSet } from '@/lib/format'
 import { sessionExercises } from '@/lib/plan'
 import type { ExerciseUnit, PlanExercise, Session } from '@/types/plan'
-import type { StrengthSet } from '@/types/userData'
+import type { SetKind, StrengthSet } from '@/types/userData'
 
 /** One exercise of the running session. */
 export interface SessionExerciseRef {
@@ -114,3 +114,9 @@ export function formatLoggedSet(set: Pick<StrengthSet, 'weightKg' | 'reps' | 'rp
   const base = formatSet(set, unit)
   return set.rpe != null ? `${base} · RPE ${formatNumber(set.rpe)}` : base
 }
+
+/** Rest after a logged set, in seconds: two minutes after a working set, one after a warmup. */
+export const REST_SECONDS: Record<SetKind, number> = { working: 120, warmup: 60 }
+
+/** What one tap of "−15" / "+15" moves the end of the rest by. */
+export const REST_STEP_SECONDS = 15

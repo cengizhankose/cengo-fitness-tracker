@@ -16,7 +16,9 @@ at RPE ≤ 7.
 
 Tab bar: **Bugün** `/` · **Plan** `/plan` · **Hareketler** `/exercises` · **Geçmiş** `/history` ·
 **İlerleme** `/progress`. **Ayarlar** `/settings` via the gear on Bugün. Also `/nutrition`,
-`/exercises/:name` and the full-screen workout flow `/session`.
+`/exercises/:name` and the full-screen workout flow `/session`. Every logged set starts a rest
+countdown in the session footer (2:00 after a working set, 1:00 after a warmup; −15 / +15, Atla),
+which beeps at zero and closes itself.
 
 ## Data
 

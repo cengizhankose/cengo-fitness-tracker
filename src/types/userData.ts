@@ -78,6 +78,14 @@ export interface ActiveSession {
   exerciseNames: string[]
   currentIndex: number
   startedAt: IsoTimestamp
+  /** The rest countdown after the last logged set; absent when not resting. */
+  rest?: RestTimer
+}
+
+/** A rest countdown on wall-clock times, so it survives a reload or a backgrounded PWA. */
+export interface RestTimer {
+  startedAt: IsoTimestamp
+  endsAt: IsoTimestamp
 }
 
 // ---- Run log ----

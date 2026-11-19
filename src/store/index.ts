@@ -134,6 +134,12 @@ export interface AppState {
   /** Appends an exercise to the running session unless it is already listed. No-op without one. */
   addSessionExercise: (name: string) => void
   upsertSessionSets: (input: SessionSetsInput) => string | undefined
+  /** Starts (or restarts) the running session's rest countdown. No-op without a session. */
+  startRest: (seconds: number) => void
+  /** Moves the end of the running rest by `seconds` (negative shortens), never before now. */
+  adjustRest: (seconds: number) => void
+  /** Ends the rest countdown early. */
+  skipRest: () => void
   /** Ends the session. Returns whether it counted as a completed workout. */
   finishSession: () => boolean
   discardSession: () => void
@@ -346,6 +352,30 @@ export const useStore = create<AppState>()(
           const cur = s.activeSession
           if (!cur || cur.exerciseNames.includes(name)) return {}
           return { activeSession: { ...cur, exerciseNames: [...cur.exerciseNames, name] } }
+        }),
+
+      startRest: (seconds) =>
+        set((s) => {
+          const cur = s.activeSession
+          if (!cur) return {}
+          const now = Date.now()
+          const rest = { startedAt: new Date(now).toISOString(), endsAt: new Date(now + seconds * 1000).toISOString() }
+          return { activeSession: { ...cur, rest } }
+        }),
+
+      adjustRest: (seconds) =>
+        set((s) => {
+          const cur = s.activeSession
+          if (!cur?.rest) return {}
+          const endsAt = Math.max(Date.parse(cur.rest.endsAt) + seconds * 1000, Date.now())
+          return { activeSession: { ...cur, rest: { ...cur.rest, endsAt: new Date(endsAt).toISOString() } } }
+        }),
+
+      skipRest: () =>
+        set((s) => {
+          const cur = s.activeSession
+          if (!cur?.rest) return {}
+          return { activeSession: { ...cur, rest: undefined } }
         }),
 
       /**

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionScreen } from '@/screens/SessionScreen'
@@ -341,5 +341,75 @@ describe('SessionScreen with a running session', () => {
     expect(s().activeSession).toBeUndefined()
     expect(sessionSets(id, 'Bench Press')).toHaveLength(1)
     expect(s().checklist[DATE]?.items.completedWorkout).not.toBe(true)
+  })
+})
+
+describe('rest timer', () => {
+  const timer = () => screen.getByRole('timer', { name: 'Kalan dinlenme' })
+  const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms))
+  function fakeClock() {
+    // Only the clock and timers (faking setImmediate stalls fake-indexeddb), and moving with
+    // real time: Testing Library's async wrapper waits on a setTimeout(0) under user-event.
+    vi.useFakeTimers({
+      shouldAdvanceTime: true,
+      toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+    })
+    return userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  }
+
+  it('starts right after a logged set, counts down, moves by 15 s and skips', async () => {
+    const user = fakeClock()
+    startPush()
+    renderApp()
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Seti kaydet' }))
+    expect(timer()).toHaveTextContent('2:00')
+
+    await advance(30_000)
+    expect(timer()).toHaveTextContent('1:30')
+    await user.click(screen.getByRole('button', { name: '15 saniye uzat' }))
+    expect(timer()).toHaveTextContent('1:45')
+    await user.click(screen.getByRole('button', { name: '15 saniye kısalt' }))
+    await user.click(screen.getByRole('button', { name: '15 saniye kısalt' }))
+    expect(timer()).toHaveTextContent('1:15')
+
+    await user.click(screen.getByRole('button', { name: 'Atla' }))
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+    expect(s().activeSession?.rest).toBeUndefined()
+  })
+
+  it('gives a warmup one minute, says when rest is over and closes itself', async () => {
+    const user = fakeClock()
+    startPush()
+    renderApp()
+
+    await user.click(screen.getByRole('checkbox', { name: /Isınma seti/ }))
+    await user.click(screen.getByRole('button', { name: 'Seti kaydet' }))
+    expect(timer()).toHaveTextContent('1:00')
+
+    await advance(60_000)
+    expect(timer()).toHaveTextContent('0:00')
+    expect(screen.getByText('Dinlenme bitti')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '15 saniye uzat' })).not.toBeInTheDocument()
+
+    await advance(5_000)
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+  })
+
+  it('restarts with each new set and survives a reload of the screen', async () => {
+    const user = fakeClock()
+    startPush()
+    const { unmount } = renderApp()
+
+    await user.click(screen.getByRole('button', { name: 'Seti kaydet' }))
+    await advance(90_000)
+    expect(timer()).toHaveTextContent('0:30')
+
+    unmount()
+    renderApp()
+    expect(timer()).toHaveTextContent('0:30')
+    await user.click(screen.getByRole('button', { name: 'Seti kaydet' }))
+    expect(timer()).toHaveTextContent('2:00')
   })
 })
