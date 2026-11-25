@@ -150,10 +150,10 @@ describe('PlanScreen session sheet', () => {
     setToday(2026, 10, 16)
     const user = renderPlan()
 
-    await user.click(within(dayRow('Çarşamba')).getByRole('button', { name: /Bacak/ }))
+    await user.click(within(dayRow('Çarşamba')).getByRole('button', { name: /Omuz \+ kol/ }))
     await user.click(screen.getByRole('button', { name: 'Bu seansı başlat' }))
 
     expect(startSession).toHaveBeenCalledTimes(1)
-    expect(startSession).toHaveBeenCalledWith('legs')
+    expect(startSession).toHaveBeenCalledWith('shoulders-arms')
   })
 })

@@ -35,7 +35,7 @@
       "blocks": [
         {
           "type": "strength",
-          "sessionId": "legs"
+          "sessionId": "shoulders-arms"
         }
       ]
     },
@@ -468,6 +468,90 @@
             "unit": "seconds",
             "region": "core"
           }
+        }
+      ]
+    },
+    {
+      "id": "shoulders-arms",
+      "title": "Omuz + kol",
+      "durationMin": 40,
+      "items": [
+        {
+          "kind": "single",
+          "exercise": {
+            "name": "Shoulder Press",
+            "sets": 1,
+            "reps": 8,
+            "unit": "kg",
+            "stepKg": 2.5,
+            "region": "shoulders"
+          }
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Lateral Raise",
+              "sets": 3,
+              "reps": 15,
+              "unit": "kg",
+              "startKg": 10,
+              "stepKg": 2.5,
+              "region": "shoulders"
+            },
+            {
+              "name": "Face Pull",
+              "sets": 3,
+              "reps": 15,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "shoulders"
+            }
+          ]
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Cable Curl",
+              "sets": 3,
+              "reps": 12,
+              "unit": "kg",
+              "startKg": 25,
+              "stepKg": 2.5,
+              "region": "biceps"
+            },
+            {
+              "name": "Rope Pushdown",
+              "sets": 3,
+              "reps": 12,
+              "unit": "kg",
+              "startKg": 35,
+              "stepKg": 2.5,
+              "region": "triceps"
+            }
+          ]
+        },
+        {
+          "kind": "superset",
+          "exercises": [
+            {
+              "name": "Hammer Curl",
+              "sets": 2,
+              "reps": 12,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "biceps"
+            },
+            {
+              "name": "Overhead Triceps Extension",
+              "sets": 2,
+              "reps": 12,
+              "unit": "kg",
+              "stepKg": 2.5,
+              "region": "triceps"
+            }
+          ]
         }
       ]
     }

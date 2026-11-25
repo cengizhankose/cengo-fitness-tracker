@@ -5,8 +5,8 @@ export type DayName =
   | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday'
   | 'Friday' | 'Saturday' | 'Sunday'
 
-/** Ids of the five strength sessions. */
-export type SessionId = 'pull' | 'push' | 'legs' | 'upper-superset' | 'short'
+/** Ids of the six strength sessions. */
+export type SessionId = 'pull' | 'push' | 'legs' | 'upper-superset' | 'short' | 'shoulders-arms'
 
 /** The three daily ticks. `completedWorkout` is auto-ticked by logging. */
 export type ChecklistKey = 'completedWorkout' | 'hitProteinTarget' | 'inBedByMidnight'

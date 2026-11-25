@@ -64,7 +64,9 @@ describe('SessionScreen without a running session', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Antrenman' })).toBeInTheDocument()
     for (const session of plan.sessions) {
-      expect(screen.getByRole('button', { name: new RegExp(`^${session.title}.*hareket`) })).toBeInTheDocument()
+      // Titles are plain text ("Omuz + kol"), not regex source.
+      const startsWithTitle = (name: string) => name.startsWith(session.title) && name.includes('hareket')
+      expect(screen.getByRole('button', { name: startsWithTitle })).toBeInTheDocument()
     }
     await user.click(screen.getByRole('button', { name: /^Push.*hareket/ }))
 

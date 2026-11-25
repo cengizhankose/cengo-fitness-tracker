@@ -99,12 +99,19 @@ describe('plan integrity', () => {
       'Cable Curl 2x15@25 + Rope Pushdown 2x15@35',
       'Plank 2x45',
     ])
+    expect(spec('shoulders-arms')).toEqual([
+      'Shoulder Press 1x8',
+      'Lateral Raise 3x15@10 + Face Pull 3x15',
+      'Cable Curl 3x12@25 + Rope Pushdown 3x12@35',
+      'Hammer Curl 2x12 + Overhead Triceps Extension 2x12',
+    ])
     expect(plan.sessions.map((s) => [s.id, s.title, s.durationMin])).toEqual([
       ['pull', 'Pull', 45],
       ['push', 'Push', 45],
       ['legs', 'Bacak', 45],
       ['upper-superset', 'Üst vücut superset', 25],
       ['short', 'Kısa seans', 30],
+      ['shoulders-arms', 'Omuz + kol', 40],
     ])
   })
 
@@ -137,7 +144,7 @@ describe('weekly template helpers', () => {
     expect(blocksForDate('2026-11-20').map((b) => b.type)).toEqual(['strength', 'football'])
     expect(defaultSessionForDate('2026-11-16')).toBe('pull')
     expect(defaultSessionForDate('2026-11-17')).toBe('push')
-    expect(defaultSessionForDate('2026-11-18')).toBe('legs')
+    expect(defaultSessionForDate('2026-11-18')).toBe('shoulders-arms')
     expect(defaultSessionForDate('2026-11-19')).toBe('upper-superset')
     expect(defaultSessionForDate('2026-11-20')).toBe('short')
     expect(defaultSessionForDate('2026-11-21')).toBeUndefined() // optional only
