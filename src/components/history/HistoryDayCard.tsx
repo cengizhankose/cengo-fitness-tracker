@@ -98,6 +98,7 @@ function StrengthRow({ exerciseDay, onEdit }: { exerciseDay: ExerciseDay; onEdit
         {warmups.length > 0 && (
           <p className="text-sm text-text-muted tabular-nums">Isınma: {formatSetList(warmups, unit)}</p>
         )}
+        {exerciseDay.splitFromSuperset && <p className="text-sm text-text-muted">Superset'ten ayrı yapıldı</p>}
       </div>
       <IconButton icon={Pencil} aria-label={`${exerciseName} düzenle`} onClick={onEdit} />
     </li>

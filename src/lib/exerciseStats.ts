@@ -64,6 +64,8 @@ export interface ExerciseDay {
   e1rm?: number
   /** Ids of the log entries merged into this day. */
   entryIds: string[]
+  /** Planned in a superset, done on its own that day. */
+  splitFromSuperset: boolean
 }
 
 /** Compare by weight, then reps: > 0 when `a` is the better set. */
@@ -111,6 +113,7 @@ function buildDay(date: IsoDate, exerciseName: string, entries: StrengthLogEntry
     volume: Math.round(volume * 10) / 10,
     e1rm: best,
     entryIds: ordered.map((e) => e.id),
+    splitFromSuperset: ordered.some((e) => e.splitFromSuperset === true),
   }
 }
 

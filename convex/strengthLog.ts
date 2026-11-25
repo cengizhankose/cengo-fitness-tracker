@@ -11,6 +11,7 @@ const record = {
   sets: v.array(strengthSet),
   sessionId: v.optional(v.string()),
   progressionNote: v.optional(v.string()),
+  splitFromSuperset: v.optional(v.boolean()),
   createdAt: v.string(),
   updatedAt: v.string(), // effective: client sends record.updatedAt ?? record.createdAt
 }
@@ -26,13 +27,24 @@ export const pull = query({
       )
       .collect()
     return docs.map(
-      ({ id, date, exerciseName, sets, sessionId, progressionNote, createdAt, updatedAt }) => ({
+      ({
         id,
         date,
         exerciseName,
         sets,
         sessionId,
         progressionNote,
+        splitFromSuperset,
+        createdAt,
+        updatedAt,
+      }) => ({
+        id,
+        date,
+        exerciseName,
+        sets,
+        sessionId,
+        progressionNote,
+        splitFromSuperset,
         createdAt,
         updatedAt,
       }),

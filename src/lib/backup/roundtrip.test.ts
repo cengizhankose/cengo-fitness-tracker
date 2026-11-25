@@ -84,13 +84,17 @@ describe('input size cap', () => {
 
 describe('export → import round trip', () => {
   it('restores state and photos byte-for-byte onto a wiped browser', async () => {
+    const populated = populatedState()
     const original: PersistedState = {
-      ...populatedState(),
+      ...populated,
+      // `false` (split, then rejoined) must survive too: sync can only overwrite the field.
+      strengthLog: populated.strengthLog.map((e) => ({ ...e, splitFromSuperset: e.id === 's2' })),
       activeSession: {
         id: 'session-1',
         date: '2026-11-16',
         planSessionId: 'upper-a',
         exerciseNames: ['Incline Dumbbell Press', 'Lat Pulldown'],
+        splitExercises: ['Incline Dumbbell Press', 'Lat Pulldown'],
         currentIndex: 1,
         startedAt: '2026-11-16T18:00:00.000Z',
       },
@@ -138,6 +142,8 @@ describe('export → import round trip', () => {
     ])
     expect(s2?.sessionId).toBe('session-1')
     expect(s2?.updatedAt).toBe('2026-11-16T07:25:00.000Z')
+    expect(s2?.splitFromSuperset).toBe(true)
+    expect(restored.strengthLog.find((e) => e.id === 's1')?.splitFromSuperset).toBe(false)
     expect(restored.checklist['2026-11-16']?.autoWorkout).toBe(true)
     expect(restored.checklist['2026-11-15']?.items).toEqual({
       completedWorkout: true,
@@ -145,6 +151,7 @@ describe('export → import round trip', () => {
       sleep75Plus: false,
     })
     expect(restored.activeSession).toEqual(original.activeSession)
+    expect(restored.activeSession?.splitExercises).toEqual(['Incline Dumbbell Press', 'Lat Pulldown'])
 
     const checkIn = restored.checkIns['2026-11-16']
     expect(checkIn?.frontPhotoKey).toMatch(/^photo:2026-11-16:front#[0-9a-z]+-\d+$/)

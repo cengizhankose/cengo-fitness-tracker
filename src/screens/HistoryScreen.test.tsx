@@ -149,6 +149,23 @@ describe('HistoryScreen', () => {
     expect(within(dayCard(TODAY)).getByText(/Tartı/)).toHaveTextContent('Tartı 95,5 kg')
   })
 
+  it("labels only the exercise done apart from its superset with Superset'ten ayrı yapıldı", () => {
+    seed({
+      strengthLog: STRENGTH_LOG.map((e) =>
+        e.id === 's-curl'
+          ? { ...e, splitFromSuperset: true }
+          : e.id === 's-rope'
+            ? { ...e, splitFromSuperset: false }
+            : e,
+      ),
+    })
+    renderHistory()
+
+    const label = within(dayCard(TODAY)).getAllByText("Superset'ten ayrı yapıldı")
+    expect(label).toHaveLength(1)
+    expect(label[0]!.closest('li')).toBe(screen.getByRole('link', { name: 'Cable Curl' }).closest('li'))
+  })
+
   it('editing the second Machine Chest Press set updates only its own entry', async () => {
     seed()
     const user = userEvent.setup()

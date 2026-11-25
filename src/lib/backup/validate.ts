@@ -407,6 +407,15 @@ function validateStrengthLog(raw: unknown, issues: Issues): StrengthLogEntry[] {
     }
     const note = optional(rec, 'progressionNote', path, isName, 'string', issues)
     const sessionId = optional(rec, 'sessionId', path, isId, `string ≤ ${MAX_ID_CHARS} chars`, issues)
+    // `false` (split, then rejoined) is kept: a sync upsert can only overwrite the field.
+    const splitFromSuperset = optional(
+      rec,
+      'splitFromSuperset',
+      path,
+      (v): v is boolean => typeof v === 'boolean',
+      'boolean',
+      issues,
+    )
     // An edited entry's stamp: the merge lets the newer edit of the same id win.
     const updatedAt = optional(
       rec,
@@ -419,6 +428,7 @@ function validateStrengthLog(raw: unknown, issues: Issues): StrengthLogEntry[] {
     if (sessionId !== undefined) entry.sessionId = sessionId
     if (updatedAt !== undefined) entry.updatedAt = updatedAt
     if (note !== undefined) entry.progressionNote = note
+    if (splitFromSuperset !== undefined) entry.splitFromSuperset = splitFromSuperset
     out.push(entry)
   }
   return out
@@ -505,6 +515,7 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
   const date = raw['date']
   const planSessionId = raw['planSessionId']
   const exerciseNames = raw['exerciseNames']
+  const splitExercises = raw['splitExercises']
   const currentIndex = raw['currentIndex']
   const startedAt = requireTimestamp(raw, 'startedAt', path, issues)
   if (!isId(id)) issues.add(`${path}.id`, `non-empty string ≤ ${MAX_ID_CHARS} chars`, id)
@@ -520,6 +531,15 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
       if (!isName(name)) issues.add(`${path}.exerciseNames[${index}]`, 'exercise name', name)
     })
   }
+  if (splitExercises !== undefined && splitExercises !== null) {
+    if (!Array.isArray(splitExercises) || splitExercises.length > 200) {
+      issues.add(`${path}.splitExercises`, 'array(0..200)', splitExercises)
+    } else {
+      splitExercises.forEach((name, index) => {
+        if (!isName(name)) issues.add(`${path}.splitExercises[${index}]`, 'exercise name', name)
+      })
+    }
+  }
   if (
     !Number.isInteger(currentIndex) ||
     (currentIndex as number) < 0 ||
@@ -534,6 +554,9 @@ function validateActiveSession(raw: unknown, issues: Issues): ActiveSession | un
     date: date as IsoDate,
     planSessionId: planSessionId as string,
     exerciseNames: exerciseNames as string[],
+    ...(Array.isArray(splitExercises) && splitExercises.length > 0
+      ? { splitExercises: splitExercises as string[] }
+      : {}),
     currentIndex: currentIndex as number,
     startedAt,
   }

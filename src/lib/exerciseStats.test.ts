@@ -4,6 +4,7 @@ import {
   e1rm,
   exerciseHistory,
   exerciseSummary,
+  groupStrengthByDay,
   lastWorkingSet,
   loggedExerciseNames,
   nextTarget,
@@ -366,5 +367,29 @@ describe('loggedExerciseNames', () => {
     expect(names.has('Lat Pulldown')).toBe(true)
     expect(names.size).toBe(7)
     expect(loggedExerciseNames(REAL_DAY, '2026-11-17').size).toBe(0)
+  })
+})
+
+describe('groupStrengthByDay', () => {
+  it('flags a day as split from its superset only when an entry has splitFromSuperset true', () => {
+    const log = [
+      entry('Cable Curl', [{ weightKg: 25, reps: 12 }], { date: '2026-11-16' }),
+      entry('Cable Curl', [{ weightKg: 25, reps: 10 }], { date: '2026-11-16', splitFromSuperset: true }),
+      entry('Cable Curl', [{ weightKg: 25, reps: 12 }], {
+        date: '2026-11-17',
+        createdAt: '2026-11-17T07:00:00.000Z',
+        splitFromSuperset: false,
+      }),
+      entry('Rope Pushdown', [{ weightKg: 35, reps: 12 }], {
+        date: '2026-11-17',
+        createdAt: '2026-11-17T07:05:00.000Z',
+      }),
+    ]
+    const flags = groupStrengthByDay(log).map((d) => [d.date, d.exerciseName, d.splitFromSuperset])
+    expect(flags).toEqual([
+      ['2026-11-17', 'Cable Curl', false],
+      ['2026-11-17', 'Rope Pushdown', false],
+      ['2026-11-16', 'Cable Curl', true],
+    ])
   })
 })

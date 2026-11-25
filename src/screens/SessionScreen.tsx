@@ -1,6 +1,8 @@
 import { Fragment, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Dumbbell, Info, Plus, X } from 'lucide-react'
+import { cx } from '@/components/ui/cx'
 import { Button, Card, ConfirmDialog, EmptyState, IconButton, Screen, Sheet } from '@/components/ui'
 import { AddExerciseSheet } from '@/components/session/AddExerciseSheet'
 import { ExerciseItem } from '@/components/session/ExerciseItem'
@@ -66,6 +68,7 @@ function RunningSession({ active }: { active: ActiveSession }) {
   const setSessionIndex = useStore((s) => s.setSessionIndex)
   const upsertSessionSets = useStore((s) => s.upsertSessionSets)
   const addSessionExercise = useStore((s) => s.addSessionExercise)
+  const setSupersetSplit = useStore((s) => s.setSupersetSplit)
   const finishSession = useStore((s) => s.finishSession)
   const discardSession = useStore((s) => s.discardSession)
   const startRest = useStore((s) => s.startRest)
@@ -76,7 +79,8 @@ function RunningSession({ active }: { active: ActiveSession }) {
 
   const session = sessionById(active.planSessionId)
   const names = active.exerciseNames
-  const groups = useMemo(() => sessionLayout(names, session), [names, session])
+  const splitExercises = active.splitExercises
+  const groups = useMemo(() => sessionLayout(names, session, splitExercises), [names, session, splitExercises])
   const planByName = useMemo(() => planExercisesByName(session), [session])
 
   /** This session's sets per exercise — read from the store, never kept locally. */
@@ -180,39 +184,60 @@ function RunningSession({ active }: { active: ActiveSession }) {
           <ol className="flex flex-col gap-3">
             {groups.map((group) => {
               const members = groupMembers(group)
-              const items = members.map((ex, i) => (
-                <Fragment key={ex.name}>
-                  {i > 0 && <hr className="border-border" />}
-                  <ExerciseItem
-                    exercise={ex}
-                    sets={setsByName.get(ex.name) ?? []}
-                    summary={summaries.get(ex.name)!}
-                    expanded={ex.index === active.currentIndex}
-                    onExpand={() => setSessionIndex(ex.index)}
-                    onLog={(set) => logSet(ex.name, set)}
-                    onReplaceSets={(sets) => writeSets(ex.name, sets)}
-                    logIsPrimary={!finishIsPrimary}
-                  />
-                </Fragment>
-              ))
-              if (group.kind === 'single') {
-                return (
-                  <li key={group.exercise.name} className="overflow-hidden rounded-lg border border-border bg-card">
-                    {items}
-                  </li>
+              const headerClass =
+                'flex items-center justify-between gap-3 pr-1 pl-4 text-xs font-semibold tracking-wider uppercase'
+              let header: ReactNode = null
+              if (group.kind === 'superset') {
+                const rounds = supersetRounds(members, (n) => workingDoneIn(setsByName.get(n)))
+                header = (
+                  <div className={cx(headerClass, 'text-volt')}>
+                    <span>Superset</span>
+                    <span className="ml-auto tabular-nums">{`${rounds.done}/${rounds.total} tur`}</span>
+                    <Button
+                      variant="ghost"
+                      aria-label="Superset'i ayır"
+                      onClick={() => setSupersetSplit(members.map((m) => m.name), true)}
+                    >
+                      Ayır
+                    </Button>
+                  </div>
+                )
+              } else if (group.splitFrom) {
+                const splitFrom = group.splitFrom
+                header = (
+                  <div className={cx(headerClass, 'text-text-muted')}>
+                    <span>Ayrı yapılıyor</span>
+                    <Button
+                      variant="ghost"
+                      aria-label={`${group.exercise.name}: superset'e geri al`}
+                      onClick={() => setSupersetSplit(splitFrom, false)}
+                    >
+                      Birleştir
+                    </Button>
+                  </div>
                 )
               }
-              const rounds = supersetRounds(members, (n) => workingDoneIn(setsByName.get(n)))
               return (
                 <li
                   key={members.map((m) => m.name).join('+')}
                   className="overflow-hidden rounded-lg border border-border bg-card"
                 >
-                  <p className="flex items-center justify-between px-4 pt-3 text-xs font-semibold tracking-wider text-volt uppercase">
-                    <span>Superset</span>
-                    <span className="tabular-nums">{`${rounds.done}/${rounds.total} tur`}</span>
-                  </p>
-                  {items}
+                  {header}
+                  {members.map((ex, i) => (
+                    <Fragment key={ex.name}>
+                      {i > 0 && <hr className="border-border" />}
+                      <ExerciseItem
+                        exercise={ex}
+                        sets={setsByName.get(ex.name) ?? []}
+                        summary={summaries.get(ex.name)!}
+                        expanded={ex.index === active.currentIndex}
+                        onExpand={() => setSessionIndex(ex.index)}
+                        onLog={(set) => logSet(ex.name, set)}
+                        onReplaceSets={(sets) => writeSets(ex.name, sets)}
+                        logIsPrimary={!finishIsPrimary}
+                      />
+                    </Fragment>
+                  ))}
                 </li>
               )
             })}

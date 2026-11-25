@@ -193,6 +193,33 @@ describe('SessionScreen with a running session', () => {
     expect(sessionSets(id, 'Rope Pushdown')).toHaveLength(2)
   })
 
+  it('a split superset is done one exercise at a time and rejoined on demand', async () => {
+    const user = userEvent.setup()
+    const id = startPush()
+    s().setSessionIndex(idx('Lateral Raise'))
+    renderApp()
+    const save = () => user.click(screen.getByRole('button', { name: 'Seti kaydet' }))
+
+    await user.click(screen.getByRole('button', { name: "Superset'i ayır" }))
+    expect(screen.queryByText(/tur$/)).not.toBeInTheDocument()
+    await save()
+    expect(s().activeSession?.currentIndex).toBe(idx('Lateral Raise'))
+    await save()
+    expect(s().activeSession?.currentIndex).toBe(idx('Rope Pushdown'))
+    await save()
+
+    const entries = s().strengthLog.filter((e) => e.sessionId === id)
+    expect(entries.map((e) => [e.exerciseName, e.splitFromSuperset])).toEqual(
+      expect.arrayContaining([
+        ['Lateral Raise', true],
+        ['Rope Pushdown', true],
+      ]),
+    )
+
+    await user.click(screen.getByRole('button', { name: "Lateral Raise: superset'e geri al" }))
+    expect(screen.getByText('Superset')).toBeInTheDocument()
+  })
+
   it('adds a catalog exercise and expands it', async () => {
     const user = userEvent.setup()
     startPush()

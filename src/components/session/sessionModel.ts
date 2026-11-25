@@ -1,5 +1,6 @@
 // Pure helpers of the session screen: how the running session's exercises are laid out
-// (plan order, supersets grouped, added exercises last) and where the cursor goes after a set.
+// (plan order, supersets grouped unless split for this session, added exercises last) and where
+// the cursor goes after a set.
 
 import { formatNumber, formatSet } from '@/lib/format'
 import { sessionExercises } from '@/lib/plan'
@@ -16,7 +17,12 @@ export interface SessionExerciseRef {
 }
 
 export type SessionGroup =
-  | { kind: 'single'; exercise: SessionExerciseRef }
+  | {
+      kind: 'single'
+      exercise: SessionExerciseRef
+      /** Set when the plan lists this exercise in a superset that is split for this session: all its present members. */
+      splitFrom?: string[]
+    }
   | { kind: 'superset'; exercises: SessionExerciseRef[] }
 
 export function groupMembers(group: SessionGroup): SessionExerciseRef[] {
@@ -26,9 +32,14 @@ export function groupMembers(group: SessionGroup): SessionExerciseRef[] {
 /**
  * The session's exercises in plan order with supersets grouped, followed by every exercise
  * that is not part of the plan session (added during the workout, or a free session) in the
- * order it was added.
+ * order it was added. A superset with any member in `splitExercises` is laid out as one
+ * single group per member, each carrying `splitFrom`.
  */
-export function sessionLayout(exerciseNames: readonly string[], session: Session | undefined): SessionGroup[] {
+export function sessionLayout(
+  exerciseNames: readonly string[],
+  session: Session | undefined,
+  splitExercises: readonly string[] = [],
+): SessionGroup[] {
   const indexOf = new Map(exerciseNames.map((name, index) => [name, index]))
   const groups: SessionGroup[] = []
   const used = new Set<string>()
@@ -45,8 +56,14 @@ export function sessionLayout(exerciseNames: readonly string[], session: Session
       .filter((m): m is SessionExerciseRef => m !== undefined)
     const [first] = members
     if (!first) continue
-    if (item.kind === 'superset' && members.length > 1) groups.push({ kind: 'superset', exercises: members })
-    else groups.push({ kind: 'single', exercise: first })
+    if (item.kind !== 'superset' || members.length < 2) {
+      groups.push({ kind: 'single', exercise: first })
+    } else if (members.some((m) => splitExercises.includes(m.name))) {
+      const splitFrom = members.map((m) => m.name)
+      for (const exercise of members) groups.push({ kind: 'single', exercise, splitFrom })
+    } else {
+      groups.push({ kind: 'superset', exercises: members })
+    }
   }
   exerciseNames.forEach((name, index) => {
     if (!used.has(name)) groups.push({ kind: 'single', exercise: { name, index } })
@@ -72,7 +89,8 @@ export function supersetRounds(
 /**
  * Where the cursor goes after a working set was saved on `current` (counts already
  * include that set). Inside a superset: the next member (cyclic) that still has sets
- * left, so members alternate round by round. Otherwise, once `current` reached its target
+ * left, so members alternate round by round. Otherwise (including a split superset member),
+ * once `current` reached its target
  * sets: the next unfinished plan exercise after it (wrapping). Undefined = stay.
  * Exercises without a target never pull the cursor.
  */

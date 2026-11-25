@@ -133,6 +133,12 @@ export interface AppState {
   setSessionIndex: (index: number) => void
   /** Appends an exercise to the running session unless it is already listed. No-op without one. */
   addSessionExercise: (name: string) => void
+  /**
+   * Takes `names` (one whole superset) out of their superset for the running session
+   * (`split`), or puts them back. Marks this session's log entries of those exercises
+   * `splitFromSuperset: split`. No-op without a session.
+   */
+  setSupersetSplit: (names: string[], split: boolean) => void
   upsertSessionSets: (input: SessionSetsInput) => string | undefined
   /** Starts (or restarts) the running session's rest countdown. No-op without a session. */
   startRest: (seconds: number) => void
@@ -354,6 +360,22 @@ export const useStore = create<AppState>()(
           return { activeSession: { ...cur, exerciseNames: [...cur.exerciseNames, name] } }
         }),
 
+      setSupersetSplit: (names, split) =>
+        set((s) => {
+          const cur = s.activeSession
+          if (!cur) return {}
+          const rest = (cur.splitExercises ?? []).filter((n) => !names.includes(n))
+          const splitExercises = split ? [...rest, ...names] : rest
+          return {
+            activeSession: { ...cur, splitExercises: splitExercises.length > 0 ? splitExercises : undefined },
+            strengthLog: s.strengthLog.map((e) =>
+              e.sessionId === cur.id && names.includes(e.exerciseName) && (e.splitFromSuperset === true) !== split
+                ? { ...e, splitFromSuperset: split, updatedAt: nowISO() }
+                : e,
+            ),
+          }
+        }),
+
       startRest: (seconds) =>
         set((s) => {
           const cur = s.activeSession
@@ -422,25 +444,30 @@ export const useStore = create<AppState>()(
         const stamped = sets.map((x) => ({ ...x, id: x.id ?? newId() }))
         const id = existing?.id ?? newId()
 
-        set((s) => ({
-          strengthLog: existing
-            ? s.strengthLog.map((e) =>
-                e.id === id ? { ...e, sets: stamped, progressionNote, updatedAt: nowISO() } : e,
-              )
-            : [
-                {
-                  id,
-                  date,
-                  exerciseName,
-                  sets: stamped,
-                  sessionId,
-                  progressionNote,
-                  createdAt: nowISO(),
-                  updatedAt: nowISO(),
-                },
-                ...s.strengthLog,
-              ],
-        }))
+        set((s) => {
+          const split =
+            s.activeSession?.id === sessionId && s.activeSession.splitExercises?.includes(exerciseName) === true
+          return {
+            strengthLog: existing
+              ? s.strengthLog.map((e) =>
+                  e.id === id ? { ...e, sets: stamped, progressionNote, updatedAt: nowISO() } : e,
+                )
+              : [
+                  {
+                    id,
+                    date,
+                    exerciseName,
+                    sets: stamped,
+                    sessionId,
+                    progressionNote,
+                    ...(split && { splitFromSuperset: true }),
+                    createdAt: nowISO(),
+                    updatedAt: nowISO(),
+                  },
+                  ...s.strengthLog,
+                ],
+          }
+        })
         return id
       },
 

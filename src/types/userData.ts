@@ -61,6 +61,12 @@ export interface StrengthLogEntry {
   sessionId?: string
   updatedAt?: IsoTimestamp
   progressionNote?: string
+  /**
+   * The plan lists this exercise in a superset, but in this session it was done on its own
+   * (all its sets, then the next exercise). `false` = split and then rejoined: written
+   * explicitly because a sync upsert patches fields and never removes one. Absent = as planned.
+   */
+  splitFromSuperset?: boolean
   createdAt: IsoTimestamp
 }
 
@@ -76,6 +82,11 @@ export interface ActiveSession {
   /** A plan `SessionId`, or 'free' for a session built exercise by exercise. */
   planSessionId: string
   exerciseNames: string[]
+  /**
+   * Exercises taken out of their plan superset for this session ("Ayır"): laid out and stepped
+   * through as single exercises. Always whole supersets; absent when nothing is split.
+   */
+  splitExercises?: string[]
   currentIndex: number
   startedAt: IsoTimestamp
   /** The rest countdown after the last logged set; absent when not resting. */

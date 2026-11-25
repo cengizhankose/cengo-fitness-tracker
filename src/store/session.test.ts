@@ -330,6 +330,65 @@ describe('addSessionExercise', () => {
   })
 })
 
+describe('setSupersetSplit', () => {
+  const PAIR = ['Row', 'Curl']
+  const OLD = '2026-08-01T00:00:00.000Z'
+  const entryOf = (sessionId: string, name: string) =>
+    s().strengthLog.find((e) => e.sessionId === sessionId && e.exerciseName === name)
+  const logSet = (sessionId: string, name: string) =>
+    s().upsertSessionSets({
+      sessionId,
+      date: DATE,
+      exerciseName: name,
+      sets: [{ weightKg: 40, reps: 10, kind: 'working' }],
+    })
+  /** Back-dates every entry so a fresh stamp is observable. */
+  const backdate = () =>
+    useStore.setState((st) => ({ strengthLog: st.strengthLog.map((e) => ({ ...e, updatedAt: OLD })) }))
+
+  it('marks logged and later entries as split and records the names', () => {
+    const id = s().startSession(DATE, 'pull', NAMES)
+    logSet(id, 'Row')
+    backdate()
+
+    s().setSupersetSplit(PAIR, true)
+
+    expect(s().activeSession?.splitExercises).toEqual(PAIR)
+    expect(entryOf(id, 'Row')).toMatchObject({ splitFromSuperset: true })
+    expect(entryOf(id, 'Row')?.updatedAt).not.toBe(OLD)
+
+    logSet(id, 'Curl')
+    expect(entryOf(id, 'Curl')?.splitFromSuperset).toBe(true)
+  })
+
+  it('rejoining writes false on the entries and clears splitExercises', () => {
+    const id = s().startSession(DATE, 'pull', NAMES)
+    s().setSupersetSplit(PAIR, true)
+    logSet(id, 'Row')
+    logSet(id, 'Curl')
+
+    s().setSupersetSplit(PAIR, false)
+
+    expect(s().activeSession?.splitExercises).toBeUndefined()
+    expect(entryOf(id, 'Row')?.splitFromSuperset).toBe(false)
+    expect(entryOf(id, 'Curl')?.splitFromSuperset).toBe(false)
+  })
+
+  it('leaves entries of another session untouched', () => {
+    const earlier = s().startSession(DATE, 'pull', NAMES)
+    logSet(earlier, 'Row')
+    s().finishSession()
+    backdate()
+    const before = entryOf(earlier, 'Row')
+
+    s().startSession(DATE, 'pull', NAMES)
+    s().setSupersetSplit(PAIR, true)
+
+    expect(entryOf(earlier, 'Row')).toBe(before)
+    expect(before?.splitFromSuperset).toBeUndefined()
+  })
+})
+
 describe('updateStrengthEntry inside a running session', () => {
   it('moving an entry of the running session does not tick the new date', () => {
     const NEW = '2026-08-04'

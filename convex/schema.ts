@@ -52,6 +52,7 @@ export default defineSchema({
     sets: v.array(strengthSet),
     sessionId: v.optional(v.string()),
     progressionNote: v.optional(v.string()),
+    splitFromSuperset: v.optional(v.boolean()),
     createdAt: v.string(),
     updatedAt: v.string(), // effective: record.updatedAt ?? record.createdAt
   })
