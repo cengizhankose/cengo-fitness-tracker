@@ -63,6 +63,7 @@ const ACTIVITY_OPTIONAL_KEYS = [
   'hrZones',
   'splits',
   'strokeSummary',
+  'strengthSets',
   'avgCadence',
   'rawNotes',
   'comment',

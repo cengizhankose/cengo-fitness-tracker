@@ -40,6 +40,16 @@ export interface StrokeSummaryEntry {
   secs: number
 }
 
+/** One active set of a Garmin strength activity (rest periods are dropped). */
+export interface GarminStrengthSet {
+  /** Garmin's exercise name ("BENCH_PRESS"); absent when the watch did not classify the set. */
+  exercise?: string
+  reps?: number
+  /** Absent when no weight was entered on the watch. */
+  weightKg?: number
+  sec?: number
+}
+
 /**
  * A single Garmin activity (run/bike/swim/strength), pushed into Convex by the
  * garmin-logan Python scripts and pulled read-only into this app. The tracker never
@@ -66,6 +76,8 @@ export interface Activity {
   hrZones?: HrZoneEntry[]
   splits?: ActivitySplit[]
   strokeSummary?: StrokeSummaryEntry[]
+  /** Strength activities only. */
+  strengthSets?: GarminStrengthSet[]
   avgCadence?: number
   rawNotes?: string
   comment?: string

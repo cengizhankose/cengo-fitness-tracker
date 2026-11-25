@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { WeighInSheet } from '@/components/progress/WeighInSheet'
 import { useStore } from '@/store'
 import { useActivitiesStore } from '@/store/activities'
+import { useGarminDailyStore } from '@/store/garminDaily'
 import { useToast } from '@/store/toast'
 import type { CheckIn, IsoDate } from '@/types/userData'
 import { ProgressScreen } from './ProgressScreen'
@@ -42,6 +43,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 10, 20, 9, 0))
   useActivitiesStore.setState({ activities: {} })
+  useGarminDailyStore.setState({ days: {} })
   useToast.setState({ toasts: [] })
 })
 
@@ -216,6 +218,35 @@ describe('ProgressScreen — goal card', () => {
     expect(goal.getByText(/verdin/)).toHaveTextContent('5,9 kg verdin')
     expect(goal.queryByText(/kaldı/)).not.toBeInTheDocument()
     expect(goal.getByRole('progressbar', { name: 'Yol' })).toHaveAttribute('aria-valuenow', '100')
+  })
+})
+
+describe('ProgressScreen — Toparlanma card', () => {
+  it("shows the latest night's sleep from Garmin", () => {
+    useGarminDailyStore.setState({
+      days: {
+        '2026-11-19': { date: '2026-11-19', sleepMin: 380, updatedAt: '2026-11-19T08:00:00.000Z' },
+        '2026-11-20': {
+          date: '2026-11-20',
+          sleepMin: 432,
+          sleepScore: 81,
+          sleepStartLocal: '2026-11-19T23:48',
+          sleepEndLocal: '2026-11-20T07:00',
+          updatedAt: '2026-11-20T08:00:00.000Z',
+        },
+      },
+    })
+    renderScreen()
+
+    const card = section('Toparlanma')
+    expect(card).toHaveTextContent('7 sa 12 dk')
+    expect(card).toHaveTextContent('skor 81 · 23:48–07:00')
+    expect(card).not.toHaveTextContent('6 sa 20 dk')
+  })
+
+  it('is not rendered without Garmin data', () => {
+    renderScreen()
+    expect(screen.queryByRole('heading', { name: 'Toparlanma' })).not.toBeInTheDocument()
   })
 })
 

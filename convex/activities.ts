@@ -7,6 +7,7 @@ import {
   hrZoneEntry,
   activitySplit,
   strokeSummaryEntry,
+  garminStrengthSet,
 } from './validators'
 import { touchSyncState, syncSecretArg } from './lib'
 import { requireSyncSecret } from './auth'
@@ -31,6 +32,7 @@ const record = {
   hrZones: v.optional(v.array(hrZoneEntry)),
   splits: v.optional(v.array(activitySplit)),
   strokeSummary: v.optional(v.array(strokeSummaryEntry)),
+  strengthSets: v.optional(v.array(garminStrengthSet)),
   avgCadence: v.optional(v.number()),
   rawNotes: v.optional(v.string()),
   comment: v.optional(v.string()),
@@ -70,6 +72,7 @@ export const pull = query({
         hrZones,
         splits,
         strokeSummary,
+        strengthSets,
         avgCadence,
         rawNotes,
         comment,
@@ -98,6 +101,7 @@ export const pull = query({
         hrZones,
         splits,
         strokeSummary,
+        strengthSets,
         avgCadence,
         rawNotes,
         comment,

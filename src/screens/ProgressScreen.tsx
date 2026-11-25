@@ -3,6 +3,7 @@ import { Scale } from 'lucide-react'
 import { BodyCard } from '@/components/progress/BodyCard'
 import { GoalCard } from '@/components/progress/GoalCard'
 import { RecentWeighIns } from '@/components/progress/RecentWeighIns'
+import { RecoveryCard } from '@/components/progress/RecoveryCard'
 import { WeekTicksCard } from '@/components/progress/WeekTicksCard'
 import { WeighInSheet } from '@/components/progress/WeighInSheet'
 import { WeightStatsCard } from '@/components/progress/WeightStatsCard'
@@ -11,22 +12,25 @@ import { Button, Screen } from '@/components/ui'
 import { BarChartCard, LineChartCard } from '@/components/ui/charts'
 import { mondayOf, toLocalISODate } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
+import { recoverySummary } from '@/lib/garminDaily'
 import { PLANNED_STRENGTH_DAYS_PER_WEEK, plan } from '@/lib/plan'
 import { runKmPerWeek, strengthDaysPerWeek, weekOverview } from '@/lib/week'
 import { goalProgress, latestWeight, weeklyAverages, weeklyChangeKg, weightSeries } from '@/lib/weight'
 import { useActivitiesStore } from '@/store/activities'
+import { useGarminDailyStore } from '@/store/garminDaily'
 import { useCheckIns, useChecklist, useRunLog, useStrengthLog } from '@/store/selectors'
 import type { IsoDate } from '@/types/userData'
 
 const CREATINE_NOTE = plan.supplements.items.find((s) => s.name.startsWith('Kreatin'))?.note
 
-/** İlerleme: weight vs the first milestone, weekly averages, training consistency. */
+/** İlerleme: weight vs the first milestone, weekly averages, training consistency, Garmin recovery. */
 export function ProgressScreen() {
   const checkIns = useCheckIns()
   const strengthLog = useStrengthLog()
   const runLog = useRunLog()
   const checklist = useChecklist()
   const activityMap = useActivitiesStore((s) => s.activities)
+  const garminDays = useGarminDailyStore((s) => s.days)
   const today = toLocalISODate()
   /** Day open in the weigh-in sheet; null = closed. */
   const [sheetDate, setSheetDate] = useState<IsoDate | null>(null)
@@ -61,6 +65,7 @@ export function ProgressScreen() {
 
   const hasWeighIns = weight.series.length > 0
   const { overview } = training
+  const recovery = useMemo(() => recoverySummary(Object.values(garminDays)), [garminDays])
 
   return (
     <Screen
@@ -121,6 +126,8 @@ export function ProgressScreen() {
         emptyHint="Koşu kaydı ya da Garmin aktivitesi gelince burada görünür"
         height={150}
       />
+
+      {recovery && <RecoveryCard summary={recovery} today={today} />}
 
       <WeekTicksCard overview={overview} today={today} />
 

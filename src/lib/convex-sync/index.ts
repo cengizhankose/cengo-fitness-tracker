@@ -3,6 +3,7 @@ import { createSyncClient } from './client'
 import { pullAll } from './pull'
 import { startOutbox } from './outbox'
 import { createActivitiesClient, pullActivities } from './activities'
+import { createGarminDailyClient, pullGarminDaily } from './garminDaily'
 import type { OutboxHandle } from './outbox'
 
 export { useSyncStatusStore } from './status'
@@ -23,9 +24,11 @@ export function initConvexSync(): void {
   if (!client) return
 
   void pullAll(client)
-  // Activities are pull-only and never enter the mergeState system, so they get their own
-  // independent client/full-pull path — see convex-sync/activities.ts.
+  // Activities and Garmin daily rows are pull-only and never enter the mergeState system, so
+  // they get their own independent client/full-pull path — see convex-sync/activities.ts and
+  // convex-sync/garminDaily.ts.
   void pullActivities(createActivitiesClient())
+  void pullGarminDaily(createGarminDailyClient())
   handle = startOutbox(client, () => useStore.getState(), useStore.subscribe)
 }
 

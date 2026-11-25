@@ -11,6 +11,8 @@ import {
   hrZoneEntry,
   activitySplit,
   strokeSummaryEntry,
+  garminStrengthSet,
+  garminDailyFields,
 } from './validators'
 
 /**
@@ -125,6 +127,7 @@ export default defineSchema({
     hrZones: v.optional(v.array(hrZoneEntry)),
     splits: v.optional(v.array(activitySplit)),
     strokeSummary: v.optional(v.array(strokeSummaryEntry)),
+    strengthSets: v.optional(v.array(garminStrengthSet)),
     avgCadence: v.optional(v.number()),
     rawNotes: v.optional(v.string()),
     comment: v.optional(v.string()),
@@ -136,6 +139,14 @@ export default defineSchema({
   })
     .index('by_key', ['key'])
     .index('by_updatedAt', ['updatedAt']),
+
+  /** One row per calendar day of Garmin wellness data (sleep, HRV, resting HR, steps, ...),
+   *  pushed by garmin-logan's sync_daily.py. Read-only from this app's perspective. A value
+   *  Garmin has not got for the day is absent. */
+  garminDaily: defineTable({
+    key: v.string(), // == date
+    ...garminDailyFields,
+  }).index('by_key', ['key']),
 
   /** Per-slice high-water mark, bumped by each slice's upsert mutation. Observability /
    *  a shared bookmark — the client also keeps its own local pull cursor per slice. */

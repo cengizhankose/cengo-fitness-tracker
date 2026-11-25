@@ -115,3 +115,42 @@ export const strokeSummaryEntry = v.object({
   meters: v.number(),
   secs: v.number(),
 })
+
+/** Mirrors src/types/activities.ts GarminStrengthSet. */
+export const garminStrengthSet = v.object({
+  exercise: v.optional(v.string()),
+  reps: v.optional(v.number()),
+  weightKg: v.optional(v.number()),
+  sec: v.optional(v.number()),
+})
+
+/** Mirrors src/types/garminDaily.ts GarminDaily. */
+export const garminDailyFields = {
+  date: v.string(),
+  steps: v.optional(v.number()),
+  stepGoal: v.optional(v.number()),
+  distanceKm: v.optional(v.number()),
+  activeKcal: v.optional(v.number()),
+  totalKcal: v.optional(v.number()),
+  intensityMin: v.optional(v.number()),
+  restingHr: v.optional(v.number()),
+  avgStress: v.optional(v.number()),
+  bodyBatteryHigh: v.optional(v.number()),
+  bodyBatteryLow: v.optional(v.number()),
+  sleepMin: v.optional(v.number()),
+  deepSleepMin: v.optional(v.number()),
+  lightSleepMin: v.optional(v.number()),
+  remSleepMin: v.optional(v.number()),
+  awakeMin: v.optional(v.number()),
+  sleepScore: v.optional(v.number()),
+  sleepStartLocal: v.optional(v.string()),
+  sleepEndLocal: v.optional(v.string()),
+  hrvNightAvg: v.optional(v.number()),
+  hrvWeeklyAvg: v.optional(v.number()),
+  hrvStatus: v.optional(v.string()),
+  vo2max: v.optional(v.number()),
+  trainingReadiness: v.optional(v.number()),
+  trainingStatus: v.optional(v.string()),
+  weightKg: v.optional(v.number()),
+  updatedAt: v.string(),
+}

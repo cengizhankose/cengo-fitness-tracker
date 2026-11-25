@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as benchmark from "../benchmark.js";
 import type * as checkIns from "../checkIns.js";
 import type * as checklist from "../checklist.js";
+import type * as garminDaily from "../garminDaily.js";
 import type * as lib from "../lib.js";
 import type * as marathonStatus from "../marathonStatus.js";
 import type * as runLog from "../runLog.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   benchmark: typeof benchmark;
   checkIns: typeof checkIns;
   checklist: typeof checklist;
+  garminDaily: typeof garminDaily;
   lib: typeof lib;
   marathonStatus: typeof marathonStatus;
   runLog: typeof runLog;
